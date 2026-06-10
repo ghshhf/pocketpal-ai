@@ -201,6 +201,14 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
         cpuInfo.putString("socModel", Build.SOC_MODEL)
       }
 
+      // HARDWARE is a distinct classifier signal from SOC_MODEL; do not
+      // coalesce them (getChipset hides one behind the other).
+      Build.HARDWARE.takeUnless { it.isNullOrEmpty() }?.let {
+        cpuInfo.putString("hardware", it)
+      }
+
+      readMaxCpuFreqMhz()?.let { cpuInfo.putInt("maxFreqMhz", it) }
+
       promise.resolve(cpuInfo)
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
@@ -243,6 +251,30 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
       })
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
+    }
+  }
+
+  // Big-core max frequency in MHz, read across all cores' cpufreq nodes.
+  // Returns null when no core exposes a readable cpuinfo_max_freq.
+  private fun readMaxCpuFreqMhz(): Int? {
+    return try {
+      var maxKhz = 0L
+      var core = 0
+      while (true) {
+        val node = File("/sys/devices/system/cpu/cpu$core/cpufreq/cpuinfo_max_freq")
+        if (!node.exists()) {
+          break
+        }
+        node.readText().trim().toLongOrNull()?.let {
+          if (it > maxKhz) {
+            maxKhz = it
+          }
+        }
+        core++
+      }
+      if (maxKhz > 0L) (maxKhz / 1000).toInt() else null
+    } catch (e: Throwable) {
+      null
     }
   }
 

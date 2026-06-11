@@ -2406,7 +2406,7 @@ class ModelStore {
     }
   };
 
-  resetModels = () => {
+  resetModels = async () => {
     const localModels = this.models.filter(
       model => model.isLocal || model.origin === ModelOrigin.LOCAL,
     );
@@ -2443,12 +2443,18 @@ class ModelStore {
       model.ggufMetadata = undefined;
     });
 
-    runInAction(() => {
-      this.models = [];
-      this.version = 0;
-      this.mergeModelLists();
+    // Re-resolve the device-appropriate presets so reset repopulates the
+    // default rule list synchronously, mirroring initializeStore (rather than
+    // leaving it empty until the next launch re-migrates).
+    const presets = await this.resolvePresets();
 
-      this.models = [...this.models, ...localModels, ...hfModels];
+    runInAction(() => {
+      // Seed with the kept local/HF models so the preset reconcile dedups
+      // against them (a downloaded HF model matching a rule preset is not
+      // duplicated).
+      this.models = [...localModels, ...hfModels];
+      this.version = 0;
+      this.mergeModelLists(presets);
     });
 
     // Re-fetch GGUF metadata with correct number types

@@ -12,9 +12,16 @@ jest.mock('../../services/deviceRules/signals', () => ({
 // constructed store is applied onto the instance, then the hydrate promise
 // resolves (so the store's post-hydrate schema-version check runs against it).
 let mockNextPersisted: Partial<DeviceRulesStore> | null = null;
+let mockNextHydrationRejects = false;
 
 jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn((target: any) => {
+    if (mockNextHydrationRejects) {
+      mockNextHydrationRejects = false;
+      // Mirror a native AsyncStorage rejection on cold start: mobx-persist-store
+      // does not wrap getItem in try/catch, so the hydrate promise rejects.
+      return Promise.reject(new Error('storage unavailable'));
+    }
     if (mockNextPersisted) {
       Object.assign(target, mockNextPersisted);
       mockNextPersisted = null;
@@ -25,6 +32,10 @@ jest.mock('mobx-persist-store', () => ({
 
 const seedPersisted = (persisted: Partial<DeviceRulesStore>) => {
   mockNextPersisted = persisted;
+};
+
+const failNextHydration = () => {
+  mockNextHydrationRejects = true;
 };
 
 const makeRules = (overrides: Partial<DeviceRules> = {}): DeviceRules => ({
@@ -106,6 +117,7 @@ describe('DeviceRulesStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNextPersisted = null;
+    mockNextHydrationRejects = false;
     (readDeviceSignals as jest.Mock).mockResolvedValue({
       ramBytes: 6 * 1e9,
       machine: 'iPhone14,2',
@@ -260,6 +272,20 @@ describe('DeviceRulesStore', () => {
 
     expect(store.deviceTier).toBe('mid');
     // No throw on the missing tier; falls back to the bundled floor.
+    expect(store.tierSuggestions.length).toBeGreaterThan(0);
+  });
+
+  it('serves the bundled floor when hydration rejects (storage failure)', async () => {
+    failNextHydration();
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as any;
+
+    const store = new DeviceRulesStore();
+    // A rejected hydrate must not block ensureRules.
+    await expect(store.ensureRules()).resolves.toBeUndefined();
+
+    // No cached rules, but classification + bundled floor still work.
+    expect(store.rules).toBeNull();
+    expect(store.deviceTier).not.toBeNull();
     expect(store.tierSuggestions.length).toBeGreaterThan(0);
   });
 

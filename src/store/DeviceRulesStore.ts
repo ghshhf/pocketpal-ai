@@ -48,19 +48,24 @@ class DeviceRulesStore {
       name: 'DeviceRulesStore',
       properties: ['rules', 'rulesVersion', 'fetchedAt', 'deviceTier'],
       storage: AsyncStorage,
-    }).then(() => {
-      // Persisted rules from an older wire schema can be shaped differently
-      // (e.g. missing tiers); drop them so we re-fetch / fall back to the
-      // bundled snapshot rather than render a stale, mismatched cache.
-      if (this.rules && this.rules.schemaVersion !== BUNDLED_SCHEMA_VERSION) {
-        runInAction(() => {
-          this.rules = null;
-          this.rulesVersion = null;
-          this.fetchedAt = null;
-          this.fetchState = 'idle';
-        });
-      }
-    });
+    })
+      .then(() => {
+        // Persisted rules from an older wire schema can be shaped differently
+        // (e.g. missing tiers); drop them so we re-fetch / fall back to the
+        // bundled snapshot rather than render a stale, mismatched cache.
+        if (this.rules && this.rules.schemaVersion !== BUNDLED_SCHEMA_VERSION) {
+          runInAction(() => {
+            this.rules = null;
+            this.rulesVersion = null;
+            this.fetchedAt = null;
+            this.fetchState = 'idle';
+          });
+        }
+      })
+      // A native storage rejection on cold start (DB corrupt/locked, bridge
+      // error) must not block ensureRules; degrade to "no cached rules" so the
+      // fetch + bundled-floor fallback still runs instead of throwing.
+      .catch(() => {});
 
     registerSuggestionProducer(
       createDeviceRulesProducer(() => this.tierSuggestions),

@@ -258,7 +258,11 @@ describe('ModelStore', () => {
           url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
           siblings: [
             {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+            {
+              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              size: 100,
+            },
           ],
         },
         modelFile: {
@@ -287,12 +291,12 @@ describe('ModelStore', () => {
       expect(presets).toHaveLength(1);
     });
 
-    it('materializes the projection sibling Model so it is resolvable by id', () => {
-      // I8: the vision LLM pairs the projection id; the expansion must put the
+    it('materializes the projection sibling as a downloadable Model (baked url)', () => {
+      // The vision LLM pairs the projection id; the expansion must put the
       // projection Model in the store so _downloadProjectionModelIfNeeded finds
-      // it. When the sibling carries no url (the bundled-JSON shape), the
-      // projection downloadUrl is empty — assert it IS materialized (present by
-      // id), matching addHFModel's behavior for the same input.
+      // it by id. The mmproj sibling carries a baked /resolve/main/ url, so its
+      // downloadUrl is non-empty and checkSpaceAndDownload proceeds (it early-
+      // returns on !downloadUrl) — without that url vision never gets its mmproj.
       const visionEntry = {
         hfModel: {
           id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
@@ -300,7 +304,11 @@ describe('ModelStore', () => {
           url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
           siblings: [
             {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+            {
+              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              size: 100,
+            },
           ],
         },
         modelFile: {
@@ -315,9 +323,11 @@ describe('ModelStore', () => {
       const proj = presets.find(m =>
         m.id.endsWith('/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf'),
       );
+      // Present by id AND downloadable: a non-empty /resolve/main/ url so
+      // checkSpaceAndDownload does not early-return on !model.downloadUrl.
       expect(proj).toBeDefined();
-      // No url on the sibling → empty downloadUrl (current, documented behavior).
-      expect(proj?.downloadUrl).toBe('');
+      expect(proj?.downloadUrl).toContain('/resolve/main/');
+      expect(proj?.downloadUrl).not.toBe('');
     });
 
     it('does not double-push an mmproj that is also a top-level tier entry', () => {
@@ -331,7 +341,11 @@ describe('ModelStore', () => {
           url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
           siblings: [
             {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+            {
+              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+              size: 100,
+            },
           ],
         },
         modelFile: {
@@ -384,10 +398,9 @@ describe('ModelStore', () => {
     });
 
     // Projection (mmproj) Models are materialized from hfModel.siblings[], which
-    // in the bundled JSON carry no `url` — so their downloadUrl is empty. The
-    // top-level LLM entries are the ones the user taps; those carry the baked
-    // /resolve/main/ url. Assert downloadUrl only on the LLM (non-projection)
-    // entries; the projection-url behavior is asserted separately below.
+    // carry a baked /resolve/main/ url — so EVERY resolved preset, LLM and
+    // mmproj alike, has a non-empty downloadUrl and is downloadable (a vision
+    // preset's mmproj would never download otherwise).
     const isProjection = (id: string) => /\/mmproj/i.test(id);
 
     it('android: parses + classifies non-low and resolves origin:HF presets', () => {
@@ -402,8 +415,6 @@ describe('ModelStore', () => {
       expect(presets.length).toBeGreaterThan(0);
       for (const m of presets) {
         expect(m.origin).toBe(ModelOrigin.HF);
-      }
-      for (const m of presets.filter(p => !isProjection(p.id))) {
         expect(m.downloadUrl).toContain('/resolve/main/');
       }
     });
@@ -420,10 +431,36 @@ describe('ModelStore', () => {
       expect(presets.length).toBeGreaterThan(0);
       for (const m of presets) {
         expect(m.origin).toBe(ModelOrigin.HF);
-      }
-      for (const m of presets.filter(p => !isProjection(p.id))) {
         expect(m.downloadUrl).toContain('/resolve/main/');
       }
+    });
+
+    it('every materialized mmproj projection carries a downloadable url', () => {
+      // Regression lock: vision siblings must bake `url` so the materialized
+      // mmproj Model is downloadable (checkSpaceAndDownload early-returns on
+      // !downloadUrl). Walk both platforms; require at least one projection.
+      let sawProjection = false;
+      for (const [os, raw] of [
+        ['android', androidBundledRules],
+        ['ios', iosBundledRules],
+      ] as const) {
+        Platform.OS = os;
+        const rules = parseDeviceRules(raw);
+        const signals = {
+          ramBytes: 16 * 1e9,
+          socModel: 'SM8850',
+          machine: 'iPhone16,1',
+        };
+        // resolvePresetModels classifies internally; one call covers the device's
+        // tier. Materialized projections must each carry a downloadable url.
+        const presets = modelStore.resolvePresetModels(rules, signals as any);
+        for (const m of presets.filter(p => isProjection(p.id))) {
+          sawProjection = true;
+          expect(m.downloadUrl).toContain('/resolve/main/');
+          expect(m.downloadUrl).not.toBe('');
+        }
+      }
+      expect(sawProjection).toBe(true);
     });
 
     it('android: every resolved LLM carries baked oid/lfs from the file', () => {

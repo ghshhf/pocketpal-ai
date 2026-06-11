@@ -472,6 +472,7 @@
             "siblings": [
               {
                 "rfilename": "Qwen3.5-2B-Q4_K_M.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
                 "size": 1280835840,
                 "oid": "2dd42a93d110e1a333c7464693e3c38b979a940e",
                 "lfs": {
@@ -482,6 +483,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 671372992,
                 "oid": "4930d4a798b18080d9cf8153f8651634bb6744ab",
                 "lfs": {
@@ -492,6 +494,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 668227264,
                 "oid": "5c87505c54bca9ebdb1e4db0c45b8a09b019c464",
                 "lfs": {
@@ -502,6 +505,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1325684416,
                 "oid": "39556a509dad6d5222003d536906af8b4cdb4b86",
                 "lfs": {
@@ -593,6 +597,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E2B-it-Q4_K_M.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
                 "size": 3106736256,
                 "oid": "7d03de67eb6ff3025f23689c31d67b370493f26e",
                 "lfs": {
@@ -603,6 +608,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 986833728,
                 "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
                 "lfs": {
@@ -613,6 +619,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 985654080,
                 "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
                 "lfs": {
@@ -623,6 +630,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1903027008,
                 "oid": "51f450da850ec496979d547c3a1fee737affda6c",
                 "lfs": {
@@ -659,6 +667,7 @@
             "siblings": [
               {
                 "rfilename": "Qwen3.5-4B-Q4_K_M.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
                 "size": 2740937888,
                 "oid": "4ca59aa028e499c9351f394e844f5e27056e5846",
                 "lfs": {
@@ -669,6 +678,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 675569344,
                 "oid": "463d1078fc2d0285190d031551c25d08fc28d568",
                 "lfs": {
@@ -679,6 +689,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 672423616,
                 "oid": "df5eff16338bf924865eb98723fc7ef20eb54e7f",
                 "lfs": {
@@ -689,6 +700,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1334075072,
                 "oid": "b31ec78c6d346b63be1343f159597e50bb3104bd",
                 "lfs": {
@@ -829,6 +841,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E4B-it-Q4_K_M.gguf",
+                "url": "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
                 "size": 5335289824,
                 "oid": "6308aca50db8390a209f3acfa888dda0e2f72d94",
                 "lfs": {
@@ -839,6 +852,7 @@
               },
               {
                 "rfilename": "mmproj-gemma-4-E4B-it-Q8_0.gguf",
+                "url": "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/mmproj-gemma-4-E4B-it-Q8_0.gguf",
                 "size": 559874528,
                 "oid": "9fb6ab294734b3eb75faa84cf634be4cfec25bf0",
                 "lfs": {
@@ -849,6 +863,7 @@
               },
               {
                 "rfilename": "mmproj-gemma-4-E4B-it-bf16.gguf",
+                "url": "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/mmproj-gemma-4-E4B-it-bf16.gguf",
                 "size": 991551968,
                 "oid": "109dba1b909bc70ffae31ac4586eb9bd1805a4f1",
                 "lfs": {
@@ -886,6 +901,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E2B-it-Q4_K_M.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
                 "size": 3106736256,
                 "oid": "7d03de67eb6ff3025f23689c31d67b370493f26e",
                 "lfs": {
@@ -896,6 +912,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 986833728,
                 "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
                 "lfs": {
@@ -906,6 +923,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 985654080,
                 "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
                 "lfs": {
@@ -916,6 +934,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1903027008,
                 "oid": "51f450da850ec496979d547c3a1fee737affda6c",
                 "lfs": {
@@ -977,6 +996,7 @@
             "siblings": [
               {
                 "rfilename": "Qwen3.5-4B-Q4_K_M.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
                 "size": 2740937888,
                 "oid": "4ca59aa028e499c9351f394e844f5e27056e5846",
                 "lfs": {
@@ -987,6 +1007,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 675569344,
                 "oid": "463d1078fc2d0285190d031551c25d08fc28d568",
                 "lfs": {
@@ -997,6 +1018,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 672423616,
                 "oid": "df5eff16338bf924865eb98723fc7ef20eb54e7f",
                 "lfs": {
@@ -1007,6 +1029,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1334075072,
                 "oid": "b31ec78c6d346b63be1343f159597e50bb3104bd",
                 "lfs": {

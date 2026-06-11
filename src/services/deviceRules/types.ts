@@ -55,7 +55,7 @@ export interface Classifier {
 // hfAsModel reads. Cast to HuggingFaceModel at the call boundary.
 export type RuleHFModel = Pick<HuggingFaceModel, 'id' | 'author' | 'url'> & {
   specs?: Pick<HuggingFaceModel, 'specs'>['specs'];
-  siblings?: ModelFile[]; // required only for vision repos (mmproj pairing)
+  siblings?: ModelFile[]; // vision repos only; each carries url+oid+lfs since the mmproj sibling is materialized into a downloadable Model
 };
 
 // One baked {hfModel, modelFile} pair from `tiers[T].models[]`. Fed verbatim to

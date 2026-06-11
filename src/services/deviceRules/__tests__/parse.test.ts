@@ -69,16 +69,25 @@ describe('parseDeviceRules', () => {
     });
   });
 
-  it('parses vision siblings when present', () => {
+  it('parses vision siblings with their downloadable url through', () => {
     const vision = JSON.parse(JSON.stringify(validRaw));
     vision.tiers.mid.models[0].hfModel.siblings = [
-      {rfilename: 'mmproj-model-f16.gguf', size: 100, oid: 'p1'},
+      {
+        rfilename: 'mmproj-model-f16.gguf',
+        url: 'https://huggingface.co/org/repo/resolve/main/mmproj-model-f16.gguf',
+        size: 100,
+        oid: 'p1',
+        lfs: {oid: 'l1', size: 100, pointerSize: 135},
+      },
     ];
     const rules = parseDeviceRules(vision);
+    const sibling = rules.tiers.mid.models[0].hfModel.siblings?.[0];
     expect(rules.tiers.mid.models[0].hfModel.siblings).toHaveLength(1);
-    expect(rules.tiers.mid.models[0].hfModel.siblings?.[0].rfilename).toBe(
-      'mmproj-model-f16.gguf',
-    );
+    expect(sibling?.rfilename).toBe('mmproj-model-f16.gguf');
+    // url must survive parse so the materialized mmproj Model is downloadable.
+    expect(sibling?.url).toContain('/resolve/main/');
+    expect(sibling?.oid).toBe('p1');
+    expect(sibling?.lfs?.oid).toBe('l1');
   });
 
   it('omits an optional name when absent', () => {

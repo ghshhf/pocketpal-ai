@@ -188,6 +188,7 @@ const parseSibling = (v: unknown): ModelFile | null => {
   }
   return {
     rfilename: v.rfilename,
+    url: asString(v.url),
     size: asNumber(v.size),
     oid: asString(v.oid),
     lfs: parseLfs(v.lfs),

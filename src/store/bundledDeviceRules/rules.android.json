@@ -550,6 +550,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
                 "size": 3041376384,
                 "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
                 "lfs": {
@@ -560,6 +561,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 986833728,
                 "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
                 "lfs": {
@@ -570,6 +572,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 985654080,
                 "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
                 "lfs": {
@@ -580,6 +583,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1903027008,
                 "oid": "51f450da850ec496979d547c3a1fee737affda6c",
                 "lfs": {
@@ -744,6 +748,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E4B-it-Q4_0.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_0.gguf",
                 "size": 4836000928,
                 "oid": "978b2c65c6c58347679cab59f9b00bbc7c66f685",
                 "lfs": {
@@ -754,6 +759,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 991552320,
                 "oid": "33ac655d4215a7ac1861e55d66168fcdc9c1b810",
                 "lfs": {
@@ -764,6 +770,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 990372672,
                 "oid": "a260ff2377ce139c1baaf114cbb6b72146489fee",
                 "lfs": {
@@ -774,6 +781,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1912464192,
                 "oid": "2a20b8ae98dfc03c9b2bb5e440e93cca98f0f377",
                 "lfs": {
@@ -811,6 +819,7 @@
             "siblings": [
               {
                 "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
                 "size": 3041376384,
                 "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
                 "lfs": {
@@ -821,6 +830,7 @@
               },
               {
                 "rfilename": "mmproj-BF16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
                 "size": 986833728,
                 "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
                 "lfs": {
@@ -831,6 +841,7 @@
               },
               {
                 "rfilename": "mmproj-F16.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
                 "size": 985654080,
                 "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
                 "lfs": {
@@ -841,6 +852,7 @@
               },
               {
                 "rfilename": "mmproj-F32.gguf",
+                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
                 "size": 1903027008,
                 "oid": "51f450da850ec496979d547c3a1fee737affda6c",
                 "lfs": {

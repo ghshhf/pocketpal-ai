@@ -543,9 +543,15 @@ class ModelStore {
 
     if (storedVersion < MODEL_LIST_VERSION) {
       this.mergeModelLists(presets);
-      runInAction(() => {
-        this.version = MODEL_LIST_VERSION;
-      });
+      // Only finalize the one-time migration once presets actually resolved.
+      // An empty result signals a transient resolve failure (e.g. the RAM read
+      // rejected); leave the version unbumped so the migration retries next
+      // launch instead of locking in an empty default list.
+      if (presets.length > 0) {
+        runInAction(() => {
+          this.version = MODEL_LIST_VERSION;
+        });
+      }
     } else {
       this.reconcilePresets(presets);
       await this.initializeDownloadStatus();

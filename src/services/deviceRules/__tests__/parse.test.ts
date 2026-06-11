@@ -1,7 +1,24 @@
 import {parseDeviceRules} from '../parse';
 
+const modelEntry = {
+  name: 'Gemma-3-1b-it (Q4_K_M)',
+  hfModel: {
+    id: 'ggml-org/gemma-3-1b-it-GGUF',
+    author: 'ggml-org',
+    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF',
+    specs: {gguf: {total: 999885952, bos_token: '<bos>', eos_token: '<eos>'}},
+  },
+  modelFile: {
+    rfilename: 'gemma-3-1b-it-Q4_K_M.gguf',
+    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
+    size: 806058240,
+    oid: 'abc123',
+    lfs: {oid: 'lfs-oid', size: 806058240, pointerSize: 135},
+  },
+};
+
 const validRaw = {
-  schema_version: '1.1.0-draft',
+  schema_version: '2.0.0-draft',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
@@ -20,55 +37,55 @@ const validRaw = {
     tier_matrix: [{ram_band: '6-8', soc_class: 'mid', tier: 'mid'}],
   },
   tiers: {
-    mid: {
-      candidates: [
-        {
-          model: 'gemma-3-1b',
-          quant: 'q4_k_m',
-          hf_repo: 'ggml-org/gemma-3-1b-it-GGUF',
-          hf_filename: 'gemma-3-1b-it-Q4_K_M.gguf',
-          min_ram_gb: 2.0,
-          obs_tg: 11.2,
-          size_bytes: 806058240,
-          params: 999885952,
-        },
-      ],
-    },
+    mid: {models: [modelEntry]},
   },
 };
 
 describe('parseDeviceRules', () => {
-  it('parses a render-complete file into camelCase types', () => {
+  it('parses the classifier into camelCase types', () => {
     const rules = parseDeviceRules(validRaw);
     expect(rules.platform).toBe('android');
     expect(rules.rulesVersion).toBe('2026-06-10.1');
     expect(rules.classifier.socModelToClass).toEqual({'Tensor G3': 'mid'});
     expect(rules.classifier.ramBands[1].maxBytes).toBeNull();
     expect(rules.classifier.cpuHeuristic).toHaveLength(2);
-
-    const c = rules.tiers.mid.candidates[0];
-    expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
-    expect(c.sizeBytes).toBe(806058240);
-    expect(c.params).toBe(999885952);
   });
 
-  it('ignores an unverified sha256 field on a candidate', () => {
-    const withSha = JSON.parse(JSON.stringify(validRaw));
-    withSha.tiers.mid.candidates[0].sha256 = 'deadbeef';
-    const rules = parseDeviceRules(withSha);
-    expect(rules.tiers.mid.candidates[0]).not.toHaveProperty('sha256');
+  it('parses a tier model entry as a baked {hfModel, modelFile} pair', () => {
+    const rules = parseDeviceRules(validRaw);
+    const e = rules.tiers.mid.models[0];
+    expect(e.name).toBe('Gemma-3-1b-it (Q4_K_M)');
+    expect(e.hfModel.id).toBe('ggml-org/gemma-3-1b-it-GGUF');
+    expect(e.hfModel.author).toBe('ggml-org');
+    expect(e.hfModel.specs?.gguf?.total).toBe(999885952);
+    expect(e.modelFile.rfilename).toBe('gemma-3-1b-it-Q4_K_M.gguf');
+    expect(e.modelFile.url).toContain('/resolve/main/');
+    expect(e.modelFile.size).toBe(806058240);
+    expect(e.modelFile.oid).toBe('abc123');
+    expect(e.modelFile.lfs).toEqual({
+      oid: 'lfs-oid',
+      size: 806058240,
+      pointerSize: 135,
+    });
   });
 
-  it('tolerates a draft file missing size_bytes/params', () => {
-    const draft = JSON.parse(JSON.stringify(validRaw));
-    delete draft.tiers.mid.candidates[0].size_bytes;
-    delete draft.tiers.mid.candidates[0].params;
+  it('parses vision siblings when present', () => {
+    const vision = JSON.parse(JSON.stringify(validRaw));
+    vision.tiers.mid.models[0].hfModel.siblings = [
+      {rfilename: 'mmproj-model-f16.gguf', size: 100, oid: 'p1'},
+    ];
+    const rules = parseDeviceRules(vision);
+    expect(rules.tiers.mid.models[0].hfModel.siblings).toHaveLength(1);
+    expect(rules.tiers.mid.models[0].hfModel.siblings?.[0].rfilename).toBe(
+      'mmproj-model-f16.gguf',
+    );
+  });
 
-    const rules = parseDeviceRules(draft);
-    const c = rules.tiers.mid.candidates[0];
-    expect(c.sizeBytes).toBeUndefined();
-    expect(c.params).toBeUndefined();
-    expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
+  it('omits an optional name when absent', () => {
+    const noName = JSON.parse(JSON.stringify(validRaw));
+    delete noName.tiers.mid.models[0].name;
+    const rules = parseDeviceRules(noName);
+    expect(rules.tiers.mid.models[0].name).toBeUndefined();
   });
 
   it('drops tier_matrix entries with a non-canonical tier', () => {
@@ -83,7 +100,7 @@ describe('parseDeviceRules', () => {
     ]);
   });
 
-  it('ignores unknown top-level / candidate fields', () => {
+  it('ignores unknown top-level fields', () => {
     const extra = {
       ...validRaw,
       $schema: 'http://x',
@@ -108,16 +125,37 @@ describe('parseDeviceRules', () => {
 
   it('defaults all four tiers even when only some are present', () => {
     const rules = parseDeviceRules(validRaw);
-    expect(rules.tiers.low.candidates).toEqual([]);
-    expect(rules.tiers.mid.candidates).toHaveLength(1);
-    expect(rules.tiers.high.candidates).toEqual([]);
-    expect(rules.tiers.flagship.candidates).toEqual([]);
+    expect(rules.tiers.low.models).toEqual([]);
+    expect(rules.tiers.mid.models).toHaveLength(1);
+    expect(rules.tiers.high.models).toEqual([]);
+    expect(rules.tiers.flagship.models).toEqual([]);
   });
 
-  it('drops candidates missing required keys', () => {
+  it('skips an entry missing a required field hfAsModel needs', () => {
     const broken = JSON.parse(JSON.stringify(validRaw));
-    broken.tiers.mid.candidates.push({model: 'x', quant: 'q4'}); // no repo/filename
+    broken.tiers.mid.models.push({
+      hfModel: {id: 'a/b', author: 'a', url: 'u'},
+      modelFile: {rfilename: 'x.gguf'}, // no url
+    });
     const rules = parseDeviceRules(broken);
-    expect(rules.tiers.mid.candidates).toHaveLength(1);
+    expect(rules.tiers.mid.models).toHaveLength(1);
+  });
+
+  it('yields empty tiers for an old candidates[] schema doc', () => {
+    const old = JSON.parse(JSON.stringify(validRaw));
+    old.tiers = {
+      mid: {
+        candidates: [
+          {
+            model: 'x',
+            quant: 'q4',
+            hf_repo: 'a/b',
+            hf_filename: 'x.gguf',
+          },
+        ],
+      },
+    };
+    const rules = parseDeviceRules(old);
+    expect(rules.tiers.mid.models).toEqual([]);
   });
 });

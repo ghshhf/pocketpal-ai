@@ -1,6 +1,9 @@
+import {HuggingFaceModel, ModelFile} from '../../utils/types';
+
 // Parsed wire shape of `rules.<platform>.json` plus the device signals the
-// classifier consumes. Render fields (`sizeBytes`/`params`) are optional: older
-// draft rules omit them and the app degrades gracefully.
+// classifier consumes. Each tier entry is a baked subset of an HF fetch — the
+// exact fields `hfAsModel` reads — so the app feeds it through that transform
+// with no remapping.
 
 export type Tier = 'low' | 'mid' | 'high' | 'flagship';
 
@@ -48,17 +51,19 @@ export interface Classifier {
   cpuHeuristic?: CpuHeuristicRule[];
 }
 
-export interface RuleCandidate {
-  model: string;
-  quant: string;
-  hfRepo: string;
-  hfFilename: string;
-  minRamGb?: number;
-  obsTg?: number;
-  nativeLowBit?: boolean;
-  multimodal?: boolean;
-  sizeBytes?: number;
-  params?: number;
+// The HuggingFaceModel subset a baked rule entry carries — exactly the fields
+// hfAsModel reads. Cast to HuggingFaceModel at the call boundary.
+export type RuleHFModel = Pick<HuggingFaceModel, 'id' | 'author' | 'url'> & {
+  specs?: Pick<HuggingFaceModel, 'specs'>['specs'];
+  siblings?: ModelFile[]; // required only for vision repos (mmproj pairing)
+};
+
+// One baked {hfModel, modelFile} pair from `tiers[T].models[]`. Fed verbatim to
+// hfAsModel to yield an origin:HF Model identical to an HF-browser add.
+export interface RuleModelEntry {
+  name?: string; // optional curated display name; app uses name ?? derived
+  hfModel: RuleHFModel;
+  modelFile: ModelFile;
 }
 
 export interface DeviceRules {
@@ -66,7 +71,7 @@ export interface DeviceRules {
   platform: string;
   rulesVersion: string;
   classifier: Classifier;
-  tiers: Record<Tier, {candidates: RuleCandidate[]}>;
+  tiers: Record<Tier, {models: RuleModelEntry[]}>;
 }
 
 export interface DeviceSignals {

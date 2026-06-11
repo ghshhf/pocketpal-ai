@@ -1,18 +1,21 @@
+import {ModelFile} from '../../utils/types';
+
 import {
   Classifier,
   CpuHeuristicRule,
   DeviceFamilyRule,
   DeviceRules,
   RamBand,
-  RuleCandidate,
+  RuleHFModel,
+  RuleModelEntry,
   Tier,
   TierMatrixEntry,
 } from './types';
 
 // Parse-guard: turns the raw wire JSON into a typed DeviceRules or throws on a
-// structurally invalid file. Unknown/extra fields are ignored; the new
-// render fields (size_bytes/params) are optional so draft files without them
-// still parse.
+// structurally invalid file. Unknown/extra fields are ignored. A tier entry
+// missing a field hfAsModel requires is skipped; an old-schema or empty tier
+// parses to an empty model list (does not throw).
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 
@@ -149,28 +152,94 @@ const parseClassifier = (v: unknown): Classifier => {
   };
 };
 
-const parseCandidate = (v: unknown): RuleCandidate | null => {
+const parseLfs = (v: unknown): ModelFile['lfs'] | undefined => {
+  if (!isObject(v)) {
+    return undefined;
+  }
+  const oid = asString(v.oid);
+  const size = asNumber(v.size);
+  const pointerSize = asNumber(v.pointerSize ?? v.pointer_size);
+  if (oid === undefined || size === undefined || pointerSize === undefined) {
+    return undefined;
+  }
+  return {oid, size, pointerSize};
+};
+
+const parseModelFile = (v: unknown): ModelFile | null => {
   if (
     !isObject(v) ||
-    typeof v.model !== 'string' ||
-    typeof v.quant !== 'string' ||
-    typeof v.hf_repo !== 'string' ||
-    typeof v.hf_filename !== 'string'
+    typeof v.rfilename !== 'string' ||
+    typeof v.url !== 'string'
   ) {
     return null;
   }
   return {
-    model: v.model,
-    quant: v.quant,
-    hfRepo: v.hf_repo,
-    hfFilename: v.hf_filename,
-    minRamGb: asNumber(v.min_ram_gb),
-    obsTg: asNumber(v.obs_tg),
-    nativeLowBit: v.native_low_bit === true,
-    multimodal: v.multimodal === true,
-    sizeBytes: asNumber(v.size_bytes),
-    params: asNumber(v.params),
+    rfilename: v.rfilename,
+    url: v.url,
+    size: asNumber(v.size),
+    oid: asString(v.oid),
+    lfs: parseLfs(v.lfs),
   };
+};
+
+const parseSibling = (v: unknown): ModelFile | null => {
+  if (!isObject(v) || typeof v.rfilename !== 'string') {
+    return null;
+  }
+  return {
+    rfilename: v.rfilename,
+    size: asNumber(v.size),
+    oid: asString(v.oid),
+    lfs: parseLfs(v.lfs),
+  };
+};
+
+const parseHFModel = (v: unknown): RuleHFModel | null => {
+  if (
+    !isObject(v) ||
+    typeof v.id !== 'string' ||
+    typeof v.author !== 'string' ||
+    typeof v.url !== 'string'
+  ) {
+    return null;
+  }
+  const specsRaw = isObject(v.specs) && isObject(v.specs.gguf) ? v.specs : null;
+  const specs = specsRaw
+    ? {
+        ...(specsRaw as object),
+        gguf: {
+          total: asNumber((specsRaw.gguf as Record<string, unknown>).total) ?? 0,
+          bos_token: asString(
+            (specsRaw.gguf as Record<string, unknown>).bos_token,
+          ),
+          eos_token: asString(
+            (specsRaw.gguf as Record<string, unknown>).eos_token,
+          ),
+        },
+      }
+    : undefined;
+  const siblings = Array.isArray(v.siblings)
+    ? v.siblings.map(parseSibling).filter((s): s is ModelFile => s !== null)
+    : undefined;
+  return {
+    id: v.id,
+    author: v.author,
+    url: v.url,
+    specs: specs as RuleHFModel['specs'],
+    siblings,
+  };
+};
+
+const parseRuleModelEntry = (v: unknown): RuleModelEntry | null => {
+  if (!isObject(v)) {
+    return null;
+  }
+  const hfModel = parseHFModel(v.hfModel);
+  const modelFile = parseModelFile(v.modelFile);
+  if (!hfModel || !modelFile) {
+    return null;
+  }
+  return {name: asString(v.name), hfModel, modelFile};
 };
 
 const parseTiers = (v: unknown): DeviceRules['tiers'] => {
@@ -180,13 +249,13 @@ const parseTiers = (v: unknown): DeviceRules['tiers'] => {
   const tiers = {} as DeviceRules['tiers'];
   for (const tier of TIERS) {
     const raw = v[tier];
-    const candidates =
-      isObject(raw) && Array.isArray(raw.candidates)
-        ? raw.candidates
-            .map(parseCandidate)
-            .filter((c): c is RuleCandidate => c !== null)
+    const models =
+      isObject(raw) && Array.isArray(raw.models)
+        ? raw.models
+            .map(parseRuleModelEntry)
+            .filter((e): e is RuleModelEntry => e !== null)
         : [];
-    tiers[tier] = {candidates};
+    tiers[tier] = {models};
   }
   return tiers;
 };

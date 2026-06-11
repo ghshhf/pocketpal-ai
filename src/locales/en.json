@@ -1319,6 +1319,7 @@
     "networkError": "Network error: Unable to connect to API",
     "downloadSetupFailedTitle": "Download Setup Failed",
     "downloadSetupFailedMessage": "Failed to prepare model for download: {{message}}",
+    "downloadConnectRequiredMessage": "Connect to the internet to download this model.",
     "cameraErrorTitle": "Camera Error",
     "cameraErrorMessage": "Failed to take photo",
     "galleryErrorTitle": "Gallery Error",

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import {Alert} from 'react-native';
+
 import {fireEvent, render, waitFor} from '../../../../../jest/test-utils';
 
 import {modelStore} from '../../../../store';
@@ -88,5 +90,50 @@ describe('SuggestionCard', () => {
         {enableVision: true},
       );
     });
+  });
+
+  it('surfaces an alert and re-enables the button when resolve rejects', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (resolveHFModelForDownload as jest.Mock).mockRejectedValue(
+      new Error('boom'),
+    );
+
+    const {getByTestId} = render(<SuggestionCard suggestion={suggestion()} />);
+    const button = getByTestId('suggestion-download-button');
+
+    fireEvent.press(button);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Download Setup Failed',
+        expect.stringContaining('boom'),
+      );
+    });
+    // Button is interactive again (not stuck disabled/loading).
+    await waitFor(() => {
+      expect(button.props.accessibilityState?.disabled).toBeFalsy();
+    });
+    expect(modelStore.downloadHFModel).not.toHaveBeenCalled();
+
+    alertSpy.mockRestore();
+  });
+
+  it('shows a connect-to-download message on a network failure', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (resolveHFModelForDownload as jest.Mock).mockRejectedValue(
+      new Error('Network request failed'),
+    );
+
+    const {getByTestId} = render(<SuggestionCard suggestion={suggestion()} />);
+    fireEvent.press(getByTestId('suggestion-download-button'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Download Setup Failed',
+        'Connect to the internet to download this model.',
+      );
+    });
+
+    alertSpy.mockRestore();
   });
 });

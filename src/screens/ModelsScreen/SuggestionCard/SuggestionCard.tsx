@@ -1,5 +1,5 @@
 import React, {useContext, useState} from 'react';
-import {View} from 'react-native';
+import {Alert, View} from 'react-native';
 
 import {Button, Card, Chip, Text} from 'react-native-paper';
 
@@ -9,9 +9,17 @@ import {createStyles} from './styles';
 
 import {hfStore, modelStore} from '../../../store';
 import {L10nContext} from '../../../utils';
+import {t} from '../../../locales';
 import {formatBytes, formatNumber} from '../../../utils/formatters';
 import {downloadSuggestion} from '../../../services/suggestions/download';
 import {ModelSuggestion} from '../../../services/suggestions/types';
+
+// Resolving a suggestion requires the network (the HF repo is fetched on tap),
+// so an offline tap fails here rather than queueing a download.
+const isNetworkError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /network|fetch|timeout|abort/i.test(message);
+};
 
 interface SuggestionCardProps {
   suggestion: ModelSuggestion;
@@ -36,6 +44,15 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({suggestion}) => {
         authToken: hfStore.shouldUseToken ? hfStore.hfToken : undefined,
         downloadHFModel: modelStore.downloadHFModel,
       });
+    } catch (error) {
+      Alert.alert(
+        l10n.errors.downloadSetupFailedTitle,
+        isNetworkError(error)
+          ? l10n.errors.downloadConnectRequiredMessage
+          : t(l10n.errors.downloadSetupFailedMessage, {
+              message: error instanceof Error ? error.message : String(error),
+            }),
+      );
     } finally {
       setIsStarting(false);
     }

@@ -33,4 +33,10 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 8,
       marginHorizontal: 2,
     },
+    suggestionsHeader: {
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 8,
+      marginBottom: 4,
+      marginHorizontal: 12,
+    },
   });

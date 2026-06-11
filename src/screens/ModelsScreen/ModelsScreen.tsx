@@ -7,7 +7,7 @@ import 'react-native-get-random-values';
 import {observer} from 'mobx-react-lite';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick, types} from '@react-native-documents/picker';
-import {Portal, Snackbar} from 'react-native-paper';
+import {Portal, Snackbar, Text} from 'react-native-paper';
 
 import {useTheme} from '../../hooks';
 
@@ -16,6 +16,7 @@ import {ModelCard} from './ModelCard';
 import {createStyles} from './styles';
 import {HFModelSearch} from './HFModelSearch';
 import {ModelAccordion} from './ModelAccordion';
+import {SuggestionCard} from './SuggestionCard';
 import {
   DownloadErrorDialog,
   ErrorSnackbar,
@@ -25,7 +26,16 @@ import {
   ServerDetailsSheet,
 } from '../../components';
 
-import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
+import {
+  uiStore,
+  modelStore,
+  hfStore,
+  UIStore,
+  serverStore,
+  deviceRulesStore,
+} from '../../store';
+import {getAllSuggestions} from '../../services/suggestions/registry';
+import {dedupSuggestions} from '../../services/suggestions/dedup';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -102,6 +112,12 @@ export const ModelsScreen: React.FC = observer(() => {
       errorDisposer();
     };
   }, []); // Only run setup once
+
+  // Fetch + classify device rules on first open; the picker shows the bundled
+  // snapshot tier immediately and upgrades to remote rules when they arrive.
+  useEffect(() => {
+    deviceRulesStore.ensureRules();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -382,6 +398,35 @@ export const ModelsScreen: React.FC = observer(() => {
     }))
     .filter(group => group.items.length > 0);
 
+  // Suggestions render in their own section, separate from downloaded models,
+  // and are never merged into ModelStore.models. Any suggestion whose
+  // {repo,filename} already exists in the store is suppressed.
+  const suggestions = computed(() => {
+    const all = getAllSuggestions({
+      ramBytes: deviceRulesStore.deviceSignals?.ramBytes,
+    });
+    return dedupSuggestions(all, modelStore.models);
+  }).get();
+
+  const renderSuggestionsSection = () => {
+    if (suggestions.length === 0) {
+      return null;
+    }
+    return (
+      <View testID="suggestions-section">
+        <Text variant="titleSmall" style={styles.suggestionsHeader}>
+          {l10n.models.suggestions.sectionTitle}
+        </Text>
+        {suggestions.map(suggestion => (
+          <SuggestionCard
+            key={`${suggestion.key.hfRepo}/${suggestion.key.hfFilename}`}
+            suggestion={suggestion}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container} testID="models-screen">
       {/* Show Error Snackbar only if no dialog is visible */}
@@ -402,6 +447,7 @@ export const ModelsScreen: React.FC = observer(() => {
         data={flatListModels}
         keyExtractor={item => item.type}
         extraData={activeModelId}
+        ListHeaderComponent={renderSuggestionsSection}
         renderItem={renderGroupHeader}
         refreshControl={
           <RefreshControl

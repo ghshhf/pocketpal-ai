@@ -202,6 +202,15 @@
       "availableToDownload": "Available to Download",
       "useAddButtonForMore": "Use + button to find more models"
     },
+    "suggestions": {
+      "sectionTitle": "Suggested for your device",
+      "primary": "Recommended",
+      "multimodal": "Vision",
+      "lowBit": "Low-bit",
+      "expectedSpeed": "~{{tg}} t/s",
+      "mayNotFit": "May not fit this device",
+      "download": "Download"
+    },
     "vision": "Vision",
     "mmproj": "Projector",
     "multimodal": {

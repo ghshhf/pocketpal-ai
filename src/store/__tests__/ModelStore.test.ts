@@ -19,6 +19,8 @@ import {modelStore, uiStore, serverStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
+import {fetchRules} from '../../services/deviceRules/rules';
+import {readDeviceSignals} from '../../services/deviceRules/signals';
 import androidBundledRules from '../bundledDeviceRules/rules.android.json';
 import iosBundledRules from '../bundledDeviceRules/rules.ios.json';
 import {t} from '../../locales';
@@ -50,6 +52,18 @@ jest.mock('../../services/downloads', () => ({
     setCallbacks: jest.fn(),
     syncWithActiveDownloads: jest.fn().mockResolvedValue(undefined),
   },
+}));
+
+// Control the network rules fetch and device-signal read at the module boundary
+// while keeping the real parse/classify. Defaults: no fetched override (bundled
+// floor), mid-tier Android signals.
+jest.mock('../../services/deviceRules/rules', () => ({
+  fetchRules: jest.fn().mockResolvedValue(null),
+}));
+jest.mock('../../services/deviceRules/signals', () => ({
+  readDeviceSignals: jest
+    .fn()
+    .mockResolvedValue({ramBytes: 8 * 1e9, socModel: 'SM8850'}),
 }));
 
 // Mock the HF store
@@ -577,7 +591,229 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('reconcilePresets pruning (steady-state drift)', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    const ruleA: Model = createModel({
+      id: 'ggml-org/repo-a/a.gguf',
+      author: 'ggml-org',
+      repo: 'repo-a',
+      filename: 'a.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+    const ruleB: Model = createModel({
+      id: 'ggml-org/repo-b/b.gguf',
+      author: 'ggml-org',
+      repo: 'repo-b',
+      filename: 'b.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+
+    it('prunes a non-downloaded rule stub no longer in the fresh set', () => {
+      modelStore.models = [{...ruleA, isRulePreset: true}];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+      expect(ids).not.toContain('ggml-org/repo-a/a.gguf');
+    });
+
+    it('never prunes a downloaded rule preset even if dropped from the set', () => {
+      modelStore.models = [{...ruleA, isRulePreset: true, isDownloaded: true}];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/repo-a/a.gguf');
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+    });
+
+    it('never prunes a user-added HF model not in the rule set', () => {
+      const userHF: Model = createModel({
+        id: 'someone/user-repo/user.gguf',
+        author: 'someone',
+        repo: 'user-repo',
+        filename: 'user.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: false,
+      }) as Model; // no isRulePreset marker
+
+      modelStore.models = [userHF];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('someone/user-repo/user.gguf');
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+    });
+
+    it('never prunes a LOCAL model', () => {
+      const local: Model = createModel({
+        id: 'local-model',
+        origin: ModelOrigin.LOCAL,
+        isLocal: true,
+        isDownloaded: true,
+      }) as Model;
+
+      modelStore.models = [local];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('local-model');
+    });
+  });
+
+  describe('resolvePresets / startup integration', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      modelStore.models = [];
+      modelStore.deviceTier = null;
+      modelStore.rulesVersion = null;
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+    });
+    afterEach(() => {
+      Platform.OS = savedOS;
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+
+    it('applies the bundled floor (no fetch) and sets deviceTier/rulesVersion', async () => {
+      const presets = await (modelStore as any).resolvePresets();
+
+      // The bundled floor populated a non-empty origin:HF preset set without the
+      // network fetch being consulted on this path.
+      expect(fetchRules).not.toHaveBeenCalled();
+      expect(presets.length).toBeGreaterThan(0);
+      expect(presets.every((m: Model) => m.origin === ModelOrigin.HF)).toBe(
+        true,
+      );
+      expect(presets.every((m: Model) => m.isRulePreset === true)).toBe(true);
+      expect(modelStore.deviceTier).not.toBeNull();
+      expect(modelStore.rulesVersion).toBeTruthy();
+    });
+
+    it('returns [] and completes when bundled parse throws (startup not bricked)', async () => {
+      (readDeviceSignals as jest.Mock).mockRejectedValue(
+        new Error('signals exploded'),
+      );
+      await expect((modelStore as any).resolvePresets()).resolves.toEqual([]);
+    });
+
+    it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
+      const fetchedRules = parseDeviceRules({
+        schema_version: '2.0.0-draft',
+        platform: 'android',
+        rules_version: '2999-01-01.1',
+        classifier: {
+          ram_bands: [{id: 'all', max_bytes: null}],
+          tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
+          soc_model_to_class: {SM8850: 'mid'},
+        },
+        tiers: {
+          mid: {
+            models: [
+              {
+                hfModel: {
+                  id: 'ggml-org/fetched-repo',
+                  author: 'ggml-org',
+                  url: 'https://huggingface.co/ggml-org/fetched-repo',
+                },
+                modelFile: {
+                  rfilename: 'fetched.gguf',
+                  url: 'https://huggingface.co/ggml-org/fetched-repo/resolve/main/fetched.gguf',
+                },
+              },
+            ],
+          },
+        },
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(fetchedRules);
+
+      await (modelStore as any).upgradeToFetchedRules();
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/fetched-repo/fetched.gguf');
+      expect(modelStore.rulesVersion).toBe('2999-01-01.1');
+    });
+
+    it('leaves the bundled presets in place when the fetch returns null', async () => {
+      modelStore.models = [
+        {...presetModelFixture, origin: ModelOrigin.HF, isRulePreset: true},
+      ];
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+
+      await (modelStore as any).upgradeToFetchedRules();
+
+      expect(modelStore.models).toHaveLength(1);
+    });
+  });
+
+  describe('legacy PRESET that is also a fresh rule entry (overlap)', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    it('collapses a non-downloaded legacy PRESET + same-id rule entry to one HF card', () => {
+      // Pre-merge state: a non-downloaded legacy PRESET stub.
+      const legacyPreset = {...presetModelFixture, isDownloaded: false};
+      modelStore.models = [legacyPreset];
+
+      // The same model now also appears in the rule set (origin HF, same id).
+      const rulePreset: Model = createModel({
+        id: presetModelFixture.id,
+        author: presetModelFixture.author,
+        repo: presetModelFixture.repo,
+        filename: presetModelFixture.filename,
+        origin: ModelOrigin.HF,
+        isDownloaded: false,
+      }) as Model;
+
+      runInAction(() => {
+        // mergeModelLists drops the non-downloaded PRESET stub, then reconcile
+        // re-adds the rule entry: exactly one card, origin HF.
+        modelStore.mergeModelLists([{...rulePreset, isRulePreset: true}]);
+      });
+
+      const matching = modelStore.models.filter(
+        m => m.id === presetModelFixture.id,
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].origin).toBe(ModelOrigin.HF);
+    });
+  });
+
   describe('built-in Lookie model download', () => {
+    let originalExists: any;
+
     beforeEach(() => {
       jest.clearAllMocks();
       (RNFS as any).__resetMockState?.();
@@ -586,7 +822,23 @@ describe('ModelStore', () => {
         undefined,
       );
       (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+      // Nothing is pre-downloaded so the LLM/mmproj are not marked downloaded
+      // (which would make checkSpaceAndDownload early-return).
+      originalExists = (RNFS.exists as jest.Mock).getMockImplementation();
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
+    });
+
+    afterEach(async () => {
+      // downloadHFModel leaves an unawaited checkSpaceAndDownload chain; let it
+      // settle, then clear the store and restore the RNFS.exists default so this
+      // test's state can't bleed into the next one.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      runInAction(() => {
+        modelStore.models = [];
+      });
+      if (originalExists) {
+        (RNFS.exists as jest.Mock).mockImplementation(originalExists);
+      }
     });
 
     // Regression: SmolVLM is in no tier and was never reconciled into the store,

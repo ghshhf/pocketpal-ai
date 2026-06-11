@@ -186,8 +186,7 @@ describe('parseDeviceRules', () => {
 
   it('rejects an entry whose rfilename contains a path traversal', () => {
     const traversal = JSON.parse(JSON.stringify(validRaw));
-    traversal.tiers.mid.models[0].modelFile.rfilename =
-      '../../etc/passwd.gguf';
+    traversal.tiers.mid.models[0].modelFile.rfilename = '../../etc/passwd.gguf';
     const rules = parseDeviceRules(traversal);
     expect(rules.tiers.mid.models).toEqual([]);
   });

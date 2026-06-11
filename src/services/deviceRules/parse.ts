@@ -17,6 +17,11 @@ import {
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 
+// Mirror of multimodalHelpers' projector filename pattern. Inlined to keep this
+// service pure — importing from multimodalHelpers would pull in the store/UI/RN
+// layer it transitively depends on.
+const MMPROJ_FILENAME = /[-_.]*mmproj[-_.].+\.gguf$/i;
+
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -216,7 +221,7 @@ const guardRepoFilename = (repo: unknown, filename: unknown): string | null => {
   return repo as string;
 };
 
-const parseMmproj = (v: unknown): RuleMmproj | null => {
+const parseMmproj = (v: unknown, candidateRepo: string): RuleMmproj | null => {
   if (!isObject(v)) {
     return null;
   }
@@ -225,6 +230,19 @@ const parseMmproj = (v: unknown): RuleMmproj | null => {
     return null;
   }
   if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
+    return null;
+  }
+  // Cross-repo projectors are not supported: the synthesized projector id is
+  // built from the LLM repo while its download url derives from the mmproj repo,
+  // so a mismatch would split the two silently. Drop such a candidate.
+  if (v.hf_repo !== candidateRepo) {
+    return null;
+  }
+  // The projector filename must match the mmproj pattern, otherwise vision
+  // detection (isVisionRepo/getMmprojFiles) would not recognize it and the
+  // model would degrade to a plain LLM with no projector. guardRepoFilename
+  // above has already proven hf_filename is a safe string.
+  if (!MMPROJ_FILENAME.test(v.hf_filename as string)) {
     return null;
   }
   const modalities = Array.isArray(v.modalities)
@@ -250,7 +268,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   if (multimodal) {
     // A multimodal candidate with an invalid projector reference is dropped
     // entirely — never ship a vision model with an unvalidated projector path.
-    const parsed = parseMmproj(v.mmproj);
+    const parsed = parseMmproj(v.mmproj, v.hf_repo as string);
     if (!parsed) {
       return null;
     }

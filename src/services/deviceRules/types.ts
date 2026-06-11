@@ -1,6 +1,6 @@
 // Parsed wire shape of `rules.<platform>.json` plus the device signals the
-// classifier consumes. Render/identity fields (`sizeBytes`/`sha256`/`params`)
-// are optional: older draft rules omit them and the app degrades gracefully.
+// classifier consumes. Render fields (`sizeBytes`/`params`) are optional: older
+// draft rules omit them and the app degrades gracefully.
 
 export type Tier = 'low' | 'mid' | 'high' | 'flagship';
 
@@ -58,7 +58,6 @@ export interface RuleCandidate {
   nativeLowBit?: boolean;
   multimodal?: boolean;
   sizeBytes?: number;
-  sha256?: string;
   params?: number;
 }
 

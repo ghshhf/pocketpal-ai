@@ -13,7 +13,6 @@ const candidate = (overrides: Partial<RuleCandidate> = {}): RuleCandidate => ({
   minRamGb: 2.0,
   obsTg: 10,
   sizeBytes: 806058240,
-  sha256: 'abc',
   params: 999885952,
   ...overrides,
 });
@@ -77,7 +76,7 @@ describe('buildSuggestionsForTier', () => {
     expect(withFields.params).toBe(999885952);
 
     const draft = buildSuggestionsForTier(
-      [candidate({sizeBytes: undefined, params: undefined, sha256: undefined})],
+      [candidate({sizeBytes: undefined, params: undefined})],
       8 * GiB,
     )[0];
     expect(draft.sizeBytes).toBeUndefined();

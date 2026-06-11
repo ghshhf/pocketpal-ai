@@ -7,12 +7,14 @@ type Platform = 'android' | 'ios';
 
 interface BundledSnapshot {
   version: string;
+  schemaVersion: string;
   classifiers: Record<Platform, Classifier>;
   tierSuggestions: Record<Platform, Record<Tier, ModelSuggestion[]>>;
 }
 
 export const bundledModelSuggestions: BundledSnapshot = {
   version: '2026-06-10.1+2026-06-10.1',
+  schemaVersion: '1.1.0-draft',
   classifiers: {
     android: {
       ramBands: [
@@ -520,8 +522,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -541,8 +541,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-1.7B-gguf',
             hfFilename: 'Bonsai-1.7B-Q1_0.gguf',
           },
-          sha256:
-            '3d7c6c90dd98717a203adb22d5eacd2581850e40aa5327e144b97766cae5f7e3',
           displayName: 'bonsai-1.7b',
           quant: 'q1_0',
           sizeBytes: 248302272,
@@ -562,8 +560,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/Qwen_Qwen3-0.6B-GGUF',
             hfFilename: 'Qwen_Qwen3-0.6B-Q4_K_M.gguf',
           },
-          sha256:
-            '9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14',
           displayName: 'qwen3-0.6b',
           quant: 'q4_k_m',
           sizeBytes: 484220320,
@@ -583,8 +579,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-350M-GGUF',
             hfFilename: 'LFM2.5-350M-Q4_K_M.gguf',
           },
-          sha256:
-            '7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4',
           displayName: 'lfm2.5-350m',
           quant: 'q4_k_m',
           sizeBytes: 229312224,
@@ -606,8 +600,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/HuggingFaceTB_SmolLM3-3B-GGUF',
             hfFilename: 'HuggingFaceTB_SmolLM3-3B-Q4_0.gguf',
           },
-          sha256:
-            '1e0e56d458e6b6d5ea18d0e5fe598cca252450308f1648afab49984fceae47da',
           displayName: 'smollm3-3b',
           quant: 'q4_0',
           sizeBytes: 1811455808,
@@ -627,8 +619,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2-2.6B-GGUF',
             hfFilename: 'LFM2-2.6B-Q4_K_M.gguf',
           },
-          sha256:
-            '384bc877b6c37064982f96885bef69e4475919f5969218ed4e3b9399ae0340df',
           displayName: 'lfm2-2.6b',
           quant: 'q4_k_m',
           sizeBytes: 1563668704,
@@ -648,8 +638,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/Qwen_Qwen3-1.7B-GGUF',
             hfFilename: 'Qwen_Qwen3-1.7B-Q4_K_M.gguf',
           },
-          sha256:
-            '72c5c3cb38fa32d5256e2fe30d03e7a64c6c79e668ad84057e3bd66e250b24fb',
           displayName: 'qwen3-1.7b',
           quant: 'q4_k_m',
           sizeBytes: 1282439584,
@@ -669,8 +657,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
             hfFilename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
           },
-          sha256:
-            'b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5',
           displayName: 'lfm2.5-1.2b',
           quant: 'q4_k_m',
           sizeBytes: 730895168,
@@ -690,8 +676,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-8B-gguf',
             hfFilename: 'Bonsai-8B-Q1_0.gguf',
           },
-          sha256:
-            '284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54',
           displayName: 'bonsai-8b',
           quant: 'q1_0',
           sizeBytes: 1158654496,
@@ -711,8 +695,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -734,8 +716,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-3-4b-it-GGUF',
             hfFilename: 'gemma-3-4b-it-Q4_0.gguf',
           },
-          sha256:
-            'a3aa2db653fc95923d76e5d9039861d56f10dfb3c906afe6bcf8f72340ef2cbf',
           displayName: 'gemma-3-4b',
           quant: 'q4_0',
           sizeBytes: 2370065536,
@@ -755,8 +735,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-4-E2B-it-GGUF',
             hfFilename: 'gemma-4-E2B-it-Q4_0.gguf',
           },
-          sha256:
-            '9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c',
           displayName: 'gemma-4-e2b',
           quant: 'q4_0',
           sizeBytes: 3041376384,
@@ -776,8 +754,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-8B-gguf',
             hfFilename: 'Bonsai-8B-Q1_0.gguf',
           },
-          sha256:
-            '284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54',
           displayName: 'bonsai-8b',
           quant: 'q1_0',
           sizeBytes: 1158654496,
@@ -797,8 +773,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/microsoft_Phi-4-mini-instruct-GGUF',
             hfFilename: 'microsoft_Phi-4-mini-instruct-Q4_0.gguf',
           },
-          sha256:
-            '2124412a2d3410dd05c5d01796457283812210633165a2a86c909f815971518e',
           displayName: 'phi-4-mini-instruct',
           quant: 'q4_0',
           sizeBytes: 2331442560,
@@ -818,8 +792,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-4B-gguf',
             hfFilename: 'Bonsai-4B-Q1_0.gguf',
           },
-          sha256:
-            '4524b3f997f0f06444e568d1f26e2efd69effa3218c7ad3047432fb171e42168',
           displayName: 'bonsai-4b',
           quant: 'q1_0',
           sizeBytes: 572270624,
@@ -838,8 +810,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -861,8 +831,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-3-4b-it-GGUF',
             hfFilename: 'gemma-3-4b-it-Q4_0.gguf',
           },
-          sha256:
-            'a3aa2db653fc95923d76e5d9039861d56f10dfb3c906afe6bcf8f72340ef2cbf',
           displayName: 'gemma-3-4b',
           quant: 'q4_0',
           sizeBytes: 2370065536,
@@ -882,8 +850,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-4-E4B-it-GGUF',
             hfFilename: 'gemma-4-E4B-it-Q4_0.gguf',
           },
-          sha256:
-            'd51af14007fe16deb45107de2411660be3b59c9e1c89bbde3bfec8ece65eeedc',
           displayName: 'gemma-4-e4b',
           quant: 'q4_0',
           sizeBytes: 4836000928,
@@ -903,8 +869,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-4-E2B-it-GGUF',
             hfFilename: 'gemma-4-E2B-it-Q4_0.gguf',
           },
-          sha256:
-            '9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c',
           displayName: 'gemma-4-e2b',
           quant: 'q4_0',
           sizeBytes: 3041376384,
@@ -924,8 +888,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-8B-A1B-GGUF',
             hfFilename: 'LFM2.5-8B-A1B-Q4_0.gguf',
           },
-          sha256:
-            '48ed1465d761311b2fd57b7fb46cf969a20b3a8281945b04e10f52bd1609e715',
           displayName: 'lfm2.5-8b-a1b',
           quant: 'q4_0',
           sizeBytes: 4844678368,
@@ -944,8 +906,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF',
             hfFilename: 'mistralai_Ministral-3-3B-Instruct-2512-Q4_0.gguf',
           },
-          sha256:
-            'c2993f4b86ddcae94031b2e384169889ceecd51b148ceda30c0f826fcce721c8',
           displayName: 'ministral-3-3b',
           quant: 'q4_0',
           sizeBytes: 2046375904,
@@ -965,8 +925,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -990,8 +948,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -1011,8 +967,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-1.7B-gguf',
             hfFilename: 'Bonsai-1.7B-Q1_0.gguf',
           },
-          sha256:
-            '3d7c6c90dd98717a203adb22d5eacd2581850e40aa5327e144b97766cae5f7e3',
           displayName: 'bonsai-1.7b',
           quant: 'q1_0',
           sizeBytes: 248302272,
@@ -1032,8 +986,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/Qwen_Qwen3-0.6B-GGUF',
             hfFilename: 'Qwen_Qwen3-0.6B-Q4_K_M.gguf',
           },
-          sha256:
-            '9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14',
           displayName: 'qwen3-0.6b',
           quant: 'q4_k_m',
           sizeBytes: 484220320,
@@ -1053,8 +1005,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-350M-GGUF',
             hfFilename: 'LFM2.5-350M-Q4_K_M.gguf',
           },
-          sha256:
-            '7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4',
           displayName: 'lfm2.5-350m',
           quant: 'q4_k_m',
           sizeBytes: 229312224,
@@ -1076,8 +1026,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/HuggingFaceTB_SmolLM3-3B-GGUF',
             hfFilename: 'HuggingFaceTB_SmolLM3-3B-Q4_K_M.gguf',
           },
-          sha256:
-            '519732558d5fa7420ab058e1b776dcfe73da78013c2fe59c7ca43c325ef89132',
           displayName: 'smollm3-3b',
           quant: 'q4_k_m',
           sizeBytes: 1915305792,
@@ -1096,8 +1044,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2-2.6B-GGUF',
             hfFilename: 'LFM2-2.6B-Q4_K_M.gguf',
           },
-          sha256:
-            '384bc877b6c37064982f96885bef69e4475919f5969218ed4e3b9399ae0340df',
           displayName: 'lfm2-2.6b',
           quant: 'q4_k_m',
           sizeBytes: 1563668704,
@@ -1117,8 +1063,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/Qwen_Qwen3-1.7B-GGUF',
             hfFilename: 'Qwen_Qwen3-1.7B-Q4_K_M.gguf',
           },
-          sha256:
-            '72c5c3cb38fa32d5256e2fe30d03e7a64c6c79e668ad84057e3bd66e250b24fb',
           displayName: 'qwen3-1.7b',
           quant: 'q4_k_m',
           sizeBytes: 1282439584,
@@ -1138,8 +1082,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
             hfFilename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
           },
-          sha256:
-            'b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5',
           displayName: 'lfm2.5-1.2b',
           quant: 'q4_k_m',
           sizeBytes: 730895168,
@@ -1159,8 +1101,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/Qwen3.5-2B-GGUF',
             hfFilename: 'Qwen3.5-2B-Q4_K_M.gguf',
           },
-          sha256:
-            'aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223',
           displayName: 'qwen3.5-2b',
           quant: 'q4_k_m',
           sizeBytes: 1280835840,
@@ -1180,8 +1120,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -1203,8 +1141,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-4b-it-GGUF',
             hfFilename: 'gemma-3-4b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863',
           displayName: 'gemma-3-4b',
           quant: 'q4_k_m',
           sizeBytes: 2489757856,
@@ -1224,8 +1160,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-4-E2B-it-GGUF',
             hfFilename: 'gemma-4-E2B-it-Q4_K_M.gguf',
           },
-          sha256:
-            '9378bc471710229ef165709b62e34bfb62231420ddaf6d729e727305b5b8672d',
           displayName: 'gemma-4-e2b',
           quant: 'q4_k_m',
           sizeBytes: 3106736256,
@@ -1245,8 +1179,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/Qwen3.5-4B-GGUF',
             hfFilename: 'Qwen3.5-4B-Q4_K_M.gguf',
           },
-          sha256:
-            '00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4',
           displayName: 'qwen3.5-4b',
           quant: 'q4_k_m',
           sizeBytes: 2740937888,
@@ -1266,8 +1198,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF',
             hfFilename: 'mistralai_Ministral-3-3B-Instruct-2512-Q4_K_M.gguf',
           },
-          sha256:
-            'fec9d28c7f8dab7c6857d54b56c8264cce57d6f6d9003bd4110f6457f071c65a',
           displayName: 'ministral-3-3b',
           quant: 'q4_k_m',
           sizeBytes: 2146498528,
@@ -1287,8 +1217,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'prism-ml/Bonsai-8B-gguf',
             hfFilename: 'Bonsai-8B-Q1_0.gguf',
           },
-          sha256:
-            '284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54',
           displayName: 'bonsai-8b',
           quant: 'q1_0',
           sizeBytes: 1158654496,
@@ -1308,8 +1236,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -1331,8 +1257,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-4b-it-GGUF',
             hfFilename: 'gemma-3-4b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863',
           displayName: 'gemma-3-4b',
           quant: 'q4_k_m',
           sizeBytes: 2489757856,
@@ -1351,8 +1275,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-4-E4B-it-GGUF',
             hfFilename: 'gemma-4-E4B-it-Q4_K_M.gguf',
           },
-          sha256:
-            '90ce98129eb3e8cc57e62433d500c97c624b1e3af1fcc85dd3b55ad7e0313e9f',
           displayName: 'gemma-4-e4b',
           quant: 'q4_k_m',
           sizeBytes: 5335289824,
@@ -1371,8 +1293,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/gemma-4-E2B-it-GGUF',
             hfFilename: 'gemma-4-E2B-it-Q4_K_M.gguf',
           },
-          sha256:
-            '9378bc471710229ef165709b62e34bfb62231420ddaf6d729e727305b5b8672d',
           displayName: 'gemma-4-e2b',
           quant: 'q4_k_m',
           sizeBytes: 3106736256,
@@ -1391,8 +1311,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'LiquidAI/LFM2.5-8B-A1B-GGUF',
             hfFilename: 'LFM2.5-8B-A1B-Q4_K_M.gguf',
           },
-          sha256:
-            '4923ec14f06b968b74d663e5949867d2d9c3bf13a20b8be1a9f9af39989b2bb0',
           displayName: 'lfm2.5-8b-a1b',
           quant: 'q4_k_m',
           sizeBytes: 5155564768,
@@ -1411,8 +1329,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'unsloth/Qwen3.5-4B-GGUF',
             hfFilename: 'Qwen3.5-4B-Q4_K_M.gguf',
           },
-          sha256:
-            '00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4',
           displayName: 'qwen3.5-4b',
           quant: 'q4_k_m',
           sizeBytes: 2740937888,
@@ -1431,8 +1347,6 @@ export const bundledModelSuggestions: BundledSnapshot = {
             hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
             hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
           },
-          sha256:
-            '8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135',
           displayName: 'gemma-3-1b',
           quant: 'q4_k_m',
           sizeBytes: 806058240,
@@ -1453,3 +1367,5 @@ export const bundledModelSuggestions: BundledSnapshot = {
 };
 
 export const BUNDLED_RULES_VERSION = bundledModelSuggestions.version;
+
+export const BUNDLED_SCHEMA_VERSION = bundledModelSuggestions.schemaVersion;

@@ -11,8 +11,8 @@ import {
 
 // Parse-guard: turns the raw wire JSON into a typed DeviceRules or throws on a
 // structurally invalid file. Unknown/extra fields are ignored; the new
-// render/identity fields (size_bytes/sha256/params) are optional so draft files
-// without them still parse.
+// render fields (size_bytes/params) are optional so draft files without them
+// still parse.
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 
@@ -63,7 +63,8 @@ const parseTierMatrix = (v: unknown): TierMatrixEntry[] => {
       !isObject(raw) ||
       typeof raw.ram_band !== 'string' ||
       typeof raw.soc_class !== 'string' ||
-      typeof raw.tier !== 'string'
+      typeof raw.tier !== 'string' ||
+      !TIERS.includes(raw.tier as Tier)
     ) {
       continue;
     }
@@ -168,7 +169,6 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     nativeLowBit: v.native_low_bit === true,
     multimodal: v.multimodal === true,
     sizeBytes: asNumber(v.size_bytes),
-    sha256: asString(v.sha256),
     params: asNumber(v.params),
   };
 };

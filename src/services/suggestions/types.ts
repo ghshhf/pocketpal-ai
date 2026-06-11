@@ -17,7 +17,6 @@ export interface SuggestionBadges {
 
 export interface ModelSuggestion {
   key: SuggestionKey;
-  sha256?: string;
   displayName: string;
   quant: string;
   sizeBytes?: number;

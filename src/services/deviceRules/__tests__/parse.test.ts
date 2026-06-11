@@ -30,7 +30,6 @@ const validRaw = {
           min_ram_gb: 2.0,
           obs_tg: 11.2,
           size_bytes: 806058240,
-          sha256: 'deadbeef',
           params: 999885952,
         },
       ],
@@ -51,21 +50,37 @@ describe('parseDeviceRules', () => {
     expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
     expect(c.sizeBytes).toBe(806058240);
     expect(c.params).toBe(999885952);
-    expect(c.sha256).toBe('deadbeef');
   });
 
-  it('tolerates a draft file missing size_bytes/sha256/params', () => {
+  it('ignores an unverified sha256 field on a candidate', () => {
+    const withSha = JSON.parse(JSON.stringify(validRaw));
+    withSha.tiers.mid.candidates[0].sha256 = 'deadbeef';
+    const rules = parseDeviceRules(withSha);
+    expect(rules.tiers.mid.candidates[0]).not.toHaveProperty('sha256');
+  });
+
+  it('tolerates a draft file missing size_bytes/params', () => {
     const draft = JSON.parse(JSON.stringify(validRaw));
     delete draft.tiers.mid.candidates[0].size_bytes;
-    delete draft.tiers.mid.candidates[0].sha256;
     delete draft.tiers.mid.candidates[0].params;
 
     const rules = parseDeviceRules(draft);
     const c = rules.tiers.mid.candidates[0];
     expect(c.sizeBytes).toBeUndefined();
-    expect(c.sha256).toBeUndefined();
     expect(c.params).toBeUndefined();
     expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
+  });
+
+  it('drops tier_matrix entries with a non-canonical tier', () => {
+    const withBadTier = JSON.parse(JSON.stringify(validRaw));
+    withBadTier.classifier.tier_matrix = [
+      {ram_band: '6-8', soc_class: 'mid', tier: 'mid'},
+      {ram_band: '6-8', soc_class: 'flagship', tier: 'ultra'},
+    ];
+    const rules = parseDeviceRules(withBadTier);
+    expect(rules.classifier.tierMatrix).toEqual([
+      {ramBand: '6-8', socClass: 'mid', tier: 'mid'},
+    ]);
   });
 
   it('ignores unknown top-level / candidate fields', () => {

@@ -14,7 +14,7 @@ import iosRulesRaw from './bundledDeviceRules/rules.ios.json';
 // Generator-as-test. `hfAsModel` and its module graph pull react-native at
 // import, so this snapshot can only be generated under jest (RN mocked), never
 // plain Node/ts-node. The offline floor needs only render fields, all of which
-// the rules JSON already carries (size_bytes/sha256/params); the download
+// the rules JSON already carries (size_bytes/params); the download
 // url/LFS are resolved fresh at tap, so no build-time HF call is needed here.
 //
 // Run `BUNDLED_GEN_WRITE=1 yarn test bundledModelSuggestions.gen` to rewrite
@@ -24,6 +24,7 @@ type Platform = 'android' | 'ios';
 
 interface GeneratedSnapshot {
   version: string;
+  schemaVersion: string;
   classifiers: Record<Platform, Classifier>;
   tierSuggestions: Record<Platform, Record<Tier, ModelSuggestion[]>>;
 }
@@ -72,9 +73,16 @@ export const generateBundledSuggestions = (
   const ios = parseDeviceRules(iosRaw);
   requireRenderFields(android, 'android');
   requireRenderFields(ios, 'ios');
+  if (android.schemaVersion !== ios.schemaVersion) {
+    throw new Error(
+      `bundled rules schema_version mismatch: android ${android.schemaVersion} ` +
+        `!= ios ${ios.schemaVersion}`,
+    );
+  }
 
   return {
     version: `${android.rulesVersion}+${ios.rulesVersion}`,
+    schemaVersion: android.schemaVersion,
     classifiers: {android: android.classifier, ios: ios.classifier},
     tierSuggestions: {
       android: buildTierSuggestions(android),
@@ -141,6 +149,7 @@ type Platform = 'android' | 'ios';
 
 interface BundledSnapshot {
   version: string;
+  schemaVersion: string;
   classifiers: Record<Platform, Classifier>;
   tierSuggestions: Record<Platform, Record<Tier, ModelSuggestion[]>>;
 }
@@ -148,6 +157,8 @@ interface BundledSnapshot {
 export const bundledModelSuggestions: BundledSnapshot = ${json};
 
 export const BUNDLED_RULES_VERSION = bundledModelSuggestions.version;
+
+export const BUNDLED_SCHEMA_VERSION = bundledModelSuggestions.schemaVersion;
 `;
   // Format with the repo prettier config so the committed artifact is
   // lint-clean and the golden comparison is stable.
@@ -172,6 +183,11 @@ describe('bundled model suggestions generator', () => {
     ];
     expect(all.length).toBeGreaterThan(0);
     expect(all.every(s => s.fitsDevice === true)).toBe(true);
+  });
+
+  it('carries the rules schema_version onto the snapshot', () => {
+    const snapshot = generateBundledSuggestions(androidRulesRaw, iosRulesRaw);
+    expect(snapshot.schemaVersion).toBeTruthy();
   });
 
   it('carries render fields into every baked suggestion', () => {

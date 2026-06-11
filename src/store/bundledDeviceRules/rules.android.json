@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0-draft",
+  "schema_version": "1.2.0-draft",
   "platform": "android",
   "rules_version": "2026-06-10.1",
   "classifier": {
@@ -260,695 +260,192 @@
   },
   "tiers": {
     "low": {
-      "models": [
+      "candidates": [
         {
-          "hfModel": {
-            "id": "ggml-org/gemma-3-1b-it-GGUF",
-            "author": "ggml-org",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 999885952,
-                "bos_token": "<bos>",
-                "eos_token": "<eos>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-1b-it-Q4_K_M.gguf",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
-            "size": 806058240,
-            "oid": "8e4ef4c4400d282149c3baaad288021eb01121ed",
-            "lfs": {
-              "oid": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-              "size": 806058240,
-              "pointerSize": 134
-            }
-          }
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
         },
         {
-          "hfModel": {
-            "id": "prism-ml/Bonsai-1.7B-gguf",
-            "author": "prism-ml",
-            "url": "https://huggingface.co/prism-ml/Bonsai-1.7B-gguf",
-            "specs": {
-              "gguf": {
-                "total": 1720028160,
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Bonsai-1.7B-Q1_0.gguf",
-            "url": "https://huggingface.co/prism-ml/Bonsai-1.7B-gguf/resolve/main/Bonsai-1.7B-Q1_0.gguf",
-            "size": 248302272,
-            "oid": "4256253216613f73f8401b70c4abe6c27d017410",
-            "lfs": {
-              "oid": "3d7c6c90dd98717a203adb22d5eacd2581850e40aa5327e144b97766cae5f7e3",
-              "size": 248302272,
-              "pointerSize": 134
-            }
-          }
+          "model": "bonsai-1.7b",
+          "hf_repo": "prism-ml/Bonsai-1.7B-gguf",
+          "hf_filename": "Bonsai-1.7B-Q1_0.gguf",
+          "params": 1720028160,
+          "size_bytes": 248302272
         },
         {
-          "hfModel": {
-            "id": "bartowski/Qwen_Qwen3-0.6B-GGUF",
-            "author": "bartowski",
-            "url": "https://huggingface.co/bartowski/Qwen_Qwen3-0.6B-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 751632384,
-                "bos_token": "<|endoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-            "url": "https://huggingface.co/bartowski/Qwen_Qwen3-0.6B-GGUF/resolve/main/Qwen_Qwen3-0.6B-Q4_K_M.gguf",
-            "size": 484220320,
-            "oid": "4c42fc7355a3c2df336e365cfdb3462ca41e34ca",
-            "lfs": {
-              "oid": "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14",
-              "size": 484220320,
-              "pointerSize": 134
-            }
-          }
+          "model": "qwen_qwen3-0.6b",
+          "hf_repo": "bartowski/Qwen_Qwen3-0.6B-GGUF",
+          "hf_filename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+          "params": 751632384,
+          "size_bytes": 484220320
         },
         {
-          "hfModel": {
-            "id": "LiquidAI/LFM2.5-350M-GGUF",
-            "author": "LiquidAI",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 354483968,
-                "bos_token": "<|startoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "LFM2.5-350M-Q4_K_M.gguf",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-350M-GGUF/resolve/main/LFM2.5-350M-Q4_K_M.gguf",
-            "size": 229312224,
-            "oid": "bdbc79b3f36ce3828f89fd15557da48bce324128",
-            "lfs": {
-              "oid": "7e6f72643caafc9a68256686638c4d7916f2cec76d1df478d4c3ddcd95a6aed4",
-              "size": 229312224,
-              "pointerSize": 134
-            }
-          }
+          "model": "lfm2.5-350m",
+          "hf_repo": "LiquidAI/LFM2.5-350M-GGUF",
+          "hf_filename": "LFM2.5-350M-Q4_K_M.gguf",
+          "params": 354483968,
+          "size_bytes": 229312224
         }
       ]
     },
     "mid": {
-      "models": [
+      "candidates": [
         {
-          "hfModel": {
-            "id": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
-            "author": "bartowski",
-            "url": "https://huggingface.co/bartowski/HuggingFaceTB_SmolLM3-3B-GGUF"
-          },
-          "modelFile": {
-            "rfilename": "HuggingFaceTB_SmolLM3-3B-Q4_0.gguf",
-            "url": "https://huggingface.co/bartowski/HuggingFaceTB_SmolLM3-3B-GGUF/resolve/main/HuggingFaceTB_SmolLM3-3B-Q4_0.gguf",
-            "size": 1811455808,
-            "oid": "b1b027e8bdf2317fbb568168ffdc47146a5969b7",
-            "lfs": {
-              "oid": "1e0e56d458e6b6d5ea18d0e5fe598cca252450308f1648afab49984fceae47da",
-              "size": 1811455808,
-              "pointerSize": 135
-            }
-          }
+          "model": "huggingfacetb_smollm3-3b",
+          "hf_repo": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
+          "hf_filename": "HuggingFaceTB_SmolLM3-3B-Q4_0.gguf",
+          "size_bytes": 1811455808
         },
         {
-          "hfModel": {
-            "id": "LiquidAI/LFM2-2.6B-GGUF",
-            "author": "LiquidAI",
-            "url": "https://huggingface.co/LiquidAI/LFM2-2.6B-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 2569272320,
-                "bos_token": "<|startoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "LFM2-2.6B-Q4_K_M.gguf",
-            "url": "https://huggingface.co/LiquidAI/LFM2-2.6B-GGUF/resolve/main/LFM2-2.6B-Q4_K_M.gguf",
-            "size": 1563668704,
-            "oid": "88540c7cd7fa1a8b362fc8d23a99ac41a56d5bcc",
-            "lfs": {
-              "oid": "384bc877b6c37064982f96885bef69e4475919f5969218ed4e3b9399ae0340df",
-              "size": 1563668704,
-              "pointerSize": 135
-            }
-          }
+          "model": "lfm2-2.6b",
+          "hf_repo": "LiquidAI/LFM2-2.6B-GGUF",
+          "hf_filename": "LFM2-2.6B-Q4_K_M.gguf",
+          "params": 2569272320,
+          "size_bytes": 1563668704
         },
         {
-          "hfModel": {
-            "id": "bartowski/Qwen_Qwen3-1.7B-GGUF",
-            "author": "bartowski",
-            "url": "https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 2031739904,
-                "bos_token": "<|endoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
-            "url": "https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q4_K_M.gguf",
-            "size": 1282439584,
-            "oid": "78534f74e319a4ccfe08831ec0b4abef1399d4ef",
-            "lfs": {
-              "oid": "72c5c3cb38fa32d5256e2fe30d03e7a64c6c79e668ad84057e3bd66e250b24fb",
-              "size": 1282439584,
-              "pointerSize": 135
-            }
-          }
+          "model": "qwen_qwen3-1.7b",
+          "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+          "hf_filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+          "params": 2031739904,
+          "size_bytes": 1282439584
         },
         {
-          "hfModel": {
-            "id": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
-            "author": "LiquidAI",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 1170340608,
-                "bos_token": "<|startoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
-            "size": 730895168,
-            "oid": "98e92dac403a4753fe75d30990cdea453d38273e",
-            "lfs": {
-              "oid": "b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5",
-              "size": 730895168,
-              "pointerSize": 134
-            }
-          }
+          "model": "lfm2.5-1.2b-instruct",
+          "hf_repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+          "hf_filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+          "params": 1170340608,
+          "size_bytes": 730895168
         },
         {
-          "hfModel": {
-            "id": "prism-ml/Bonsai-8B-gguf",
-            "author": "prism-ml",
-            "url": "https://huggingface.co/prism-ml/Bonsai-8B-gguf",
-            "specs": {
-              "gguf": {
-                "total": 8188548096,
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Bonsai-8B-Q1_0.gguf",
-            "url": "https://huggingface.co/prism-ml/Bonsai-8B-gguf/resolve/main/Bonsai-8B-Q1_0.gguf",
-            "size": 1158654496,
-            "oid": "966ce3f7febac97f542f6a8ece0b4eb10aaddd16",
-            "lfs": {
-              "oid": "284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54",
-              "size": 1158654496,
-              "pointerSize": 135
-            }
-          }
+          "model": "bonsai-8b",
+          "hf_repo": "prism-ml/Bonsai-8B-gguf",
+          "hf_filename": "Bonsai-8B-Q1_0.gguf",
+          "params": 8188548096,
+          "size_bytes": 1158654496
         },
         {
-          "hfModel": {
-            "id": "ggml-org/gemma-3-1b-it-GGUF",
-            "author": "ggml-org",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 999885952,
-                "bos_token": "<bos>",
-                "eos_token": "<eos>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-1b-it-Q4_K_M.gguf",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
-            "size": 806058240,
-            "oid": "8e4ef4c4400d282149c3baaad288021eb01121ed",
-            "lfs": {
-              "oid": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-              "size": 806058240,
-              "pointerSize": 134
-            }
-          }
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
         }
       ]
     },
     "high": {
-      "models": [
+      "candidates": [
         {
-          "hfModel": {
-            "id": "unsloth/gemma-3-4b-it-GGUF",
-            "author": "unsloth",
-            "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 3880263168,
-                "bos_token": "<bos>",
-                "eos_token": "<end_of_turn>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-4b-it-Q4_0.gguf",
-            "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_0.gguf",
-            "size": 2370065536,
-            "oid": "ae9ca514975f004e19e1d3b1bb240216431ebd5b",
-            "lfs": {
-              "oid": "a3aa2db653fc95923d76e5d9039861d56f10dfb3c906afe6bcf8f72340ef2cbf",
-              "size": 2370065536,
-              "pointerSize": 135
-            }
+          "model": "gemma-3-4b-it",
+          "hf_repo": "unsloth/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_0.gguf",
+          "params": 3880263168,
+          "size_bytes": 2370065536
+        },
+        {
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
+          "params": 4647450147,
+          "size_bytes": 3041376384,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
           }
         },
         {
-          "hfModel": {
-            "id": "unsloth/gemma-4-E2B-it-GGUF",
-            "author": "unsloth",
-            "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 4647450147,
-                "bos_token": "<bos>",
-                "eos_token": "<turn|>"
-              }
-            },
-            "siblings": [
-              {
-                "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
-                "size": 3041376384,
-                "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
-                "lfs": {
-                  "oid": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
-                  "size": 3041376384,
-                  "pointerSize": 135
-                }
-              },
-              {
-                "rfilename": "mmproj-BF16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
-                "size": 986833728,
-                "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
-                "lfs": {
-                  "oid": "a402f10fb5780bf91d03a10cd89061139f522bee2e679b1291bbfdcd71d9547d",
-                  "size": 986833728,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
-                "size": 985654080,
-                "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
-                "lfs": {
-                  "oid": "140be8d7849741f88c50757d529b84373ee8e27052cc2236855b537f4a8215fa",
-                  "size": 985654080,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F32.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
-                "size": 1903027008,
-                "oid": "51f450da850ec496979d547c3a1fee737affda6c",
-                "lfs": {
-                  "oid": "c8aea293c714bf5cbe1d2e12aad60bbff2633b9e39d485dbc77b2387530c63a3",
-                  "size": 1903027008,
-                  "pointerSize": 135
-                }
-              }
-            ]
-          },
-          "modelFile": {
-            "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
-            "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
-            "size": 3041376384,
-            "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
-            "lfs": {
-              "oid": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
-              "size": 3041376384,
-              "pointerSize": 135
-            }
-          }
+          "model": "bonsai-8b",
+          "hf_repo": "prism-ml/Bonsai-8B-gguf",
+          "hf_filename": "Bonsai-8B-Q1_0.gguf",
+          "params": 8188548096,
+          "size_bytes": 1158654496
         },
         {
-          "hfModel": {
-            "id": "prism-ml/Bonsai-8B-gguf",
-            "author": "prism-ml",
-            "url": "https://huggingface.co/prism-ml/Bonsai-8B-gguf",
-            "specs": {
-              "gguf": {
-                "total": 8188548096,
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Bonsai-8B-Q1_0.gguf",
-            "url": "https://huggingface.co/prism-ml/Bonsai-8B-gguf/resolve/main/Bonsai-8B-Q1_0.gguf",
-            "size": 1158654496,
-            "oid": "966ce3f7febac97f542f6a8ece0b4eb10aaddd16",
-            "lfs": {
-              "oid": "284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54",
-              "size": 1158654496,
-              "pointerSize": 135
-            }
-          }
+          "model": "microsoft_phi-4-mini-instruct",
+          "hf_repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
+          "hf_filename": "microsoft_Phi-4-mini-instruct-Q4_0.gguf",
+          "params": 3836021856,
+          "size_bytes": 2331442560
         },
         {
-          "hfModel": {
-            "id": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
-            "author": "bartowski",
-            "url": "https://huggingface.co/bartowski/microsoft_Phi-4-mini-instruct-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 3836021856,
-                "bos_token": "<|endoftext|>",
-                "eos_token": "<|endoftext|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "microsoft_Phi-4-mini-instruct-Q4_0.gguf",
-            "url": "https://huggingface.co/bartowski/microsoft_Phi-4-mini-instruct-GGUF/resolve/main/microsoft_Phi-4-mini-instruct-Q4_0.gguf",
-            "size": 2331442560,
-            "oid": "a50db00cbc93d29be203c5c2aea2895be76efe3a",
-            "lfs": {
-              "oid": "2124412a2d3410dd05c5d01796457283812210633165a2a86c909f815971518e",
-              "size": 2331442560,
-              "pointerSize": 135
-            }
-          }
+          "model": "bonsai-4b",
+          "hf_repo": "prism-ml/Bonsai-4B-gguf",
+          "hf_filename": "Bonsai-4B-Q1_0.gguf",
+          "params": 4021784576,
+          "size_bytes": 572270624
         },
         {
-          "hfModel": {
-            "id": "prism-ml/Bonsai-4B-gguf",
-            "author": "prism-ml",
-            "url": "https://huggingface.co/prism-ml/Bonsai-4B-gguf",
-            "specs": {
-              "gguf": {
-                "total": 4021784576,
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "Bonsai-4B-Q1_0.gguf",
-            "url": "https://huggingface.co/prism-ml/Bonsai-4B-gguf/resolve/main/Bonsai-4B-Q1_0.gguf",
-            "size": 572270624,
-            "oid": "918e3b239b88bc8b92eb2d47c9567c2bf744c7ba",
-            "lfs": {
-              "oid": "4524b3f997f0f06444e568d1f26e2efd69effa3218c7ad3047432fb171e42168",
-              "size": 572270624,
-              "pointerSize": 134
-            }
-          }
-        },
-        {
-          "hfModel": {
-            "id": "ggml-org/gemma-3-1b-it-GGUF",
-            "author": "ggml-org",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 999885952,
-                "bos_token": "<bos>",
-                "eos_token": "<eos>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-1b-it-Q4_K_M.gguf",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
-            "size": 806058240,
-            "oid": "8e4ef4c4400d282149c3baaad288021eb01121ed",
-            "lfs": {
-              "oid": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-              "size": 806058240,
-              "pointerSize": 134
-            }
-          }
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
         }
       ]
     },
     "flagship": {
-      "models": [
+      "candidates": [
         {
-          "hfModel": {
-            "id": "unsloth/gemma-3-4b-it-GGUF",
-            "author": "unsloth",
-            "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 3880263168,
-                "bos_token": "<bos>",
-                "eos_token": "<end_of_turn>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-4b-it-Q4_0.gguf",
-            "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_0.gguf",
-            "size": 2370065536,
-            "oid": "ae9ca514975f004e19e1d3b1bb240216431ebd5b",
-            "lfs": {
-              "oid": "a3aa2db653fc95923d76e5d9039861d56f10dfb3c906afe6bcf8f72340ef2cbf",
-              "size": 2370065536,
-              "pointerSize": 135
-            }
+          "model": "gemma-3-4b-it",
+          "hf_repo": "unsloth/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_0.gguf",
+          "params": 3880263168,
+          "size_bytes": 2370065536
+        },
+        {
+          "model": "gemma-4-e4b-it",
+          "hf_repo": "unsloth/gemma-4-E4B-it-GGUF",
+          "hf_filename": "gemma-4-E4B-it-Q4_0.gguf",
+          "params": 7518069290,
+          "size_bytes": 4836000928,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E4B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 991552320,
+            "modalities": ["vision"]
           }
         },
         {
-          "hfModel": {
-            "id": "unsloth/gemma-4-E4B-it-GGUF",
-            "author": "unsloth",
-            "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 7518069290,
-                "bos_token": "<bos>",
-                "eos_token": "<turn|>"
-              }
-            },
-            "siblings": [
-              {
-                "rfilename": "gemma-4-E4B-it-Q4_0.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_0.gguf",
-                "size": 4836000928,
-                "oid": "978b2c65c6c58347679cab59f9b00bbc7c66f685",
-                "lfs": {
-                  "oid": "d51af14007fe16deb45107de2411660be3b59c9e1c89bbde3bfec8ece65eeedc",
-                  "size": 4836000928,
-                  "pointerSize": 135
-                }
-              },
-              {
-                "rfilename": "mmproj-BF16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-BF16.gguf",
-                "size": 991552320,
-                "oid": "33ac655d4215a7ac1861e55d66168fcdc9c1b810",
-                "lfs": {
-                  "oid": "ee01cba03fd9c71ea2ea722225d24a84f72e7197714367e550ef705ef8851bc6",
-                  "size": 991552320,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-F16.gguf",
-                "size": 990372672,
-                "oid": "a260ff2377ce139c1baaf114cbb6b72146489fee",
-                "lfs": {
-                  "oid": "ddf46c21d7078e95338cfc22306b19b276a29a5ad089023449dd54d4b6170a51",
-                  "size": 990372672,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F32.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mmproj-F32.gguf",
-                "size": 1912464192,
-                "oid": "2a20b8ae98dfc03c9b2bb5e440e93cca98f0f377",
-                "lfs": {
-                  "oid": "343cdea7775835ebdd1caa6c42ec3ec3e711d082835c72253d4e87c4b7e303d0",
-                  "size": 1912464192,
-                  "pointerSize": 135
-                }
-              }
-            ]
-          },
-          "modelFile": {
-            "rfilename": "gemma-4-E4B-it-Q4_0.gguf",
-            "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_0.gguf",
-            "size": 4836000928,
-            "oid": "978b2c65c6c58347679cab59f9b00bbc7c66f685",
-            "lfs": {
-              "oid": "d51af14007fe16deb45107de2411660be3b59c9e1c89bbde3bfec8ece65eeedc",
-              "size": 4836000928,
-              "pointerSize": 135
-            }
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
+          "params": 4647450147,
+          "size_bytes": 3041376384,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
           }
         },
         {
-          "hfModel": {
-            "id": "unsloth/gemma-4-E2B-it-GGUF",
-            "author": "unsloth",
-            "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 4647450147,
-                "bos_token": "<bos>",
-                "eos_token": "<turn|>"
-              }
-            },
-            "siblings": [
-              {
-                "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
-                "size": 3041376384,
-                "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
-                "lfs": {
-                  "oid": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
-                  "size": 3041376384,
-                  "pointerSize": 135
-                }
-              },
-              {
-                "rfilename": "mmproj-BF16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-BF16.gguf",
-                "size": 986833728,
-                "oid": "7309cb5fea4bab978345d86fee8b42b211faf48a",
-                "lfs": {
-                  "oid": "a402f10fb5780bf91d03a10cd89061139f522bee2e679b1291bbfdcd71d9547d",
-                  "size": 986833728,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F16.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F16.gguf",
-                "size": 985654080,
-                "oid": "33fe44b5e1d7db418ac8cb465f2860432ea6b5e6",
-                "lfs": {
-                  "oid": "140be8d7849741f88c50757d529b84373ee8e27052cc2236855b537f4a8215fa",
-                  "size": 985654080,
-                  "pointerSize": 134
-                }
-              },
-              {
-                "rfilename": "mmproj-F32.gguf",
-                "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/mmproj-F32.gguf",
-                "size": 1903027008,
-                "oid": "51f450da850ec496979d547c3a1fee737affda6c",
-                "lfs": {
-                  "oid": "c8aea293c714bf5cbe1d2e12aad60bbff2633b9e39d485dbc77b2387530c63a3",
-                  "size": 1903027008,
-                  "pointerSize": 135
-                }
-              }
-            ]
-          },
-          "modelFile": {
-            "rfilename": "gemma-4-E2B-it-Q4_0.gguf",
-            "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
-            "size": 3041376384,
-            "oid": "a7a2b0095d1f7949934f0dd2f56a55c620980be4",
-            "lfs": {
-              "oid": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
-              "size": 3041376384,
-              "pointerSize": 135
-            }
-          }
+          "model": "lfm2.5-8b-a1b",
+          "hf_repo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+          "hf_filename": "LFM2.5-8B-A1B-Q4_0.gguf",
+          "params": 8467856832,
+          "size_bytes": 4844678368
         },
         {
-          "hfModel": {
-            "id": "LiquidAI/LFM2.5-8B-A1B-GGUF",
-            "author": "LiquidAI",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-8B-A1B-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 8467856832,
-                "bos_token": "<|startoftext|>",
-                "eos_token": "<|im_end|>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "LFM2.5-8B-A1B-Q4_0.gguf",
-            "url": "https://huggingface.co/LiquidAI/LFM2.5-8B-A1B-GGUF/resolve/main/LFM2.5-8B-A1B-Q4_0.gguf",
-            "size": 4844678368,
-            "oid": "be3a8622914a5eebc5e938b1ce543bcef0af6607",
-            "lfs": {
-              "oid": "48ed1465d761311b2fd57b7fb46cf969a20b3a8281945b04e10f52bd1609e715",
-              "size": 4844678368,
-              "pointerSize": 135
-            }
-          }
+          "model": "mistralai_ministral-3-3b-instruct-2512",
+          "hf_repo": "bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
+          "hf_filename": "mistralai_Ministral-3-3B-Instruct-2512-Q4_0.gguf",
+          "params": 3429006336,
+          "size_bytes": 2046375904
         },
         {
-          "hfModel": {
-            "id": "bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
-            "author": "bartowski",
-            "url": "https://huggingface.co/bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 3429006336,
-                "bos_token": "<s>",
-                "eos_token": "</s>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "mistralai_Ministral-3-3B-Instruct-2512-Q4_0.gguf",
-            "url": "https://huggingface.co/bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF/resolve/main/mistralai_Ministral-3-3B-Instruct-2512-Q4_0.gguf",
-            "size": 2046375904,
-            "oid": "8b13a51c8aec1c131d5a94d5102551fd07ecc64c",
-            "lfs": {
-              "oid": "c2993f4b86ddcae94031b2e384169889ceecd51b148ceda30c0f826fcce721c8",
-              "size": 2046375904,
-              "pointerSize": 135
-            }
-          }
-        },
-        {
-          "hfModel": {
-            "id": "ggml-org/gemma-3-1b-it-GGUF",
-            "author": "ggml-org",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF",
-            "specs": {
-              "gguf": {
-                "total": 999885952,
-                "bos_token": "<bos>",
-                "eos_token": "<eos>"
-              }
-            }
-          },
-          "modelFile": {
-            "rfilename": "gemma-3-1b-it-Q4_K_M.gguf",
-            "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf",
-            "size": 806058240,
-            "oid": "8e4ef4c4400d282149c3baaad288021eb01121ed",
-            "lfs": {
-              "oid": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-              "size": 806058240,
-              "pointerSize": 134
-            }
-          }
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
         }
       ]
     }

@@ -1,0 +1,155 @@
+import {Platform} from 'react-native';
+import {makeAutoObservable, runInAction} from 'mobx';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {makePersistable} from 'mobx-persist-store';
+
+import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
+import {parseDeviceRules} from '../services/deviceRules/parse';
+import {createDeviceRulesProducer} from '../services/deviceRules/producer';
+import {getRulesUrl} from '../services/deviceRules/rulesUrls';
+import {readDeviceSignals} from '../services/deviceRules/signals';
+import {DeviceRules, DeviceSignals, Tier} from '../services/deviceRules/types';
+import {registerSuggestionProducer} from '../services/suggestions/registry';
+
+type FetchState = 'idle' | 'fetching' | 'ok' | 'error';
+
+const FETCH_TIMEOUT_MS = 10_000;
+const RULES_TTL_MS = 24 * 60 * 60 * 1000; // re-fetch at most once a day
+
+class DeviceRulesStore {
+  rules: DeviceRules | null = null;
+  rulesVersion: string | null = null;
+  fetchedAt: number | null = null;
+  fetchState: FetchState = 'idle';
+  deviceTier: Tier | null = null;
+  deviceSignals: DeviceSignals | null = null;
+
+  private inFlight: Promise<void> | null = null;
+
+  constructor() {
+    makeAutoObservable(this);
+
+    makePersistable(this, {
+      name: 'DeviceRulesStore',
+      properties: ['rules', 'rulesVersion', 'fetchedAt', 'deviceTier'],
+      storage: AsyncStorage,
+    });
+
+    registerSuggestionProducer(
+      createDeviceRulesProducer(() => ({
+        rules: this.effectiveRules,
+        tier: this.deviceTier,
+      })),
+    );
+  }
+
+  // Online rules take precedence; offline floor (bundled snapshot) is wired in
+  // a later step. Until then this is simply the fetched/cached rules.
+  get effectiveRules(): DeviceRules | null {
+    return this.rules;
+  }
+
+  private get isStale(): boolean {
+    if (this.fetchedAt === null) {
+      return true;
+    }
+    return Date.now() - this.fetchedAt > RULES_TTL_MS;
+  }
+
+  // Read signals once, fetch+cache rules with TTL, classify into a tier. Safe
+  // to call repeatedly; concurrent calls share one in-flight fetch.
+  async ensureRules(force = false): Promise<void> {
+    if (this.inFlight) {
+      return this.inFlight;
+    }
+    if (!force && this.fetchState === 'ok' && !this.isStale) {
+      // Still ensure a tier is resolved from cached rules.
+      this.resolveTier();
+      return;
+    }
+
+    this.inFlight = this.refresh();
+    try {
+      await this.inFlight;
+    } finally {
+      runInAction(() => {
+        this.inFlight = null;
+      });
+    }
+  }
+
+  private async refresh(): Promise<void> {
+    await this.ensureSignals();
+    runInAction(() => {
+      this.fetchState = 'fetching';
+    });
+
+    try {
+      const rules = await this.fetchRules();
+      runInAction(() => {
+        this.rules = rules;
+        this.rulesVersion = rules.rulesVersion;
+        this.fetchedAt = Date.now();
+        this.fetchState = 'ok';
+      });
+    } catch {
+      // Keep last cached rules (if any); never surface an error when cache or
+      // the offline floor can serve the picker.
+      runInAction(() => {
+        this.fetchState = 'error';
+      });
+    }
+
+    this.resolveTier();
+  }
+
+  private async ensureSignals(): Promise<void> {
+    if (this.deviceSignals) {
+      return;
+    }
+    const signals = await readDeviceSignals();
+    runInAction(() => {
+      this.deviceSignals = signals;
+    });
+  }
+
+  private async fetchRules(): Promise<DeviceRules> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(getRulesUrl(), {signal: controller.signal});
+      if (!response.ok) {
+        throw new Error(`rules fetch failed: ${response.status}`);
+      }
+      const json = await response.json();
+      const parsed = parseDeviceRules(json);
+      if (parsed.platform !== Platform.OS) {
+        throw new Error(
+          `rules platform "${parsed.platform}" != "${Platform.OS}"`,
+        );
+      }
+      return parsed;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private resolveTier(): void {
+    const signals = this.deviceSignals;
+    const rules = this.effectiveRules;
+    if (!signals || !rules) {
+      return;
+    }
+    const tier = classify(
+      signals,
+      rules.classifier,
+      Platform.OS as ClassifyPlatform,
+    );
+    runInAction(() => {
+      this.deviceTier = tier;
+    });
+  }
+}
+
+export const deviceRulesStore = new DeviceRulesStore();
+export {DeviceRulesStore};

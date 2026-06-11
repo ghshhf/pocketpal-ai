@@ -532,8 +532,8 @@ class ModelStore {
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
 
-    // Resolve the device-tier preset list (fetched rules override the bundled
-    // offline floor) before merging, so it reflects the latest rules each init.
+    // Apply the bundled offline floor immediately (no network) so the list is
+    // never empty while a slow rules fetch is in flight, then merge/reconcile.
     const presets = await this.resolvePresets();
 
     if (storedVersion < MODEL_LIST_VERSION) {
@@ -546,6 +546,10 @@ class ModelStore {
       await this.initializeDownloadStatus();
       this.removeInvalidLocalModels();
     }
+
+    // Upgrade past the bundled floor to the online rules override in the
+    // background; reconcile (id-keyed, dedup) folds in any newer set.
+    this.upgradeToFetchedRules();
 
     await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
 
@@ -608,27 +612,30 @@ class ModelStore {
       return [named];
     });
 
+    // Dedup on the full model id (author/repo/filename) so two authors sharing a
+    // repo name + filename don't collapse. The id also spans origins, matching a
+    // legacy origin:PRESET download against a new origin:HF rule entry.
     const seen = new Set<string>();
     const presets: Model[] = [];
     for (const model of flat) {
-      const key = `${model.repo}/${model.filename}`;
-      if (seen.has(key)) {
+      if (seen.has(model.id)) {
         continue;
       }
-      seen.add(key);
-      presets.push(model);
+      seen.add(model.id);
+      presets.push({...model, isRulePreset: true});
     }
     return presets;
   };
 
-  // Fetch rules (online override) or fall back to the bundled offline floor,
-  // both normalized through parseDeviceRules, then resolve the tier presets.
+  // Resolve the preset list from the bundled offline floor only — no network. This
+  // populates the model list immediately on first launch so a slow or hanging
+  // rules fetch can never leave the list empty. The fetched online override is
+  // applied afterwards by upgradeToFetchedRules (fire-and-forget).
   private resolvePresets = async (): Promise<Model[]> => {
     try {
       const signals = await readDeviceSignals();
-      const fetched = await fetchRules();
       const bundledRaw = Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
-      const rules = fetched ?? parseDeviceRules(bundledRaw);
+      const rules = parseDeviceRules(bundledRaw);
       const tier = classify(
         signals,
         rules.classifier,
@@ -645,21 +652,57 @@ class ModelStore {
     }
   };
 
-  // Append rule presets that aren't already represented by a kept model. The
-  // key is {repo,filename}, which spans origins: a downloaded legacy PRESET and
-  // a new origin:HF rule entry share it, so the kept download suppresses the
-  // rule stub (no duplicate card, no re-download).
+  // Fetch the online rules override and, if it parses to a usable rule set,
+  // re-classify and reconcile so the list upgrades past the bundled floor. Runs
+  // off the first-population path (fire-and-forget); any failure leaves the
+  // already-applied bundled presets in place.
+  private upgradeToFetchedRules = async (): Promise<void> => {
+    try {
+      const fetched = await fetchRules();
+      if (!fetched) {
+        return;
+      }
+      const signals = await readDeviceSignals();
+      const tier = classify(
+        signals,
+        fetched.classifier,
+        Platform.OS as ClassifyPlatform,
+      );
+      runInAction(() => {
+        this.deviceTier = tier;
+        this.rulesVersion = fetched.rulesVersion;
+      });
+      this.reconcilePresets(this.resolvePresetModels(fetched, signals));
+    } catch (error) {
+      console.warn('[ModelStore] fetched-rules upgrade failed:', error);
+    }
+  };
+
+  // Reconcile the freshly-resolved rule presets into the model list. Keyed on the
+  // full model id (author/repo/filename), which spans origins: a downloaded
+  // legacy PRESET and a new origin:HF rule entry share it, so the kept download
+  // suppresses the rule stub (no duplicate card, no re-download).
+  //
+  // Two-sided so the list stays equal to the current rule set:
+  //  - prune non-downloaded rule-provenance stubs no longer in the fresh set
+  //    (a newer rulesVersion dropped them, or the device re-tiered). Downloaded
+  //    models of any origin and user-added HF/LOCAL models are never pruned.
+  //  - append the fresh presets not already represented by a kept model.
   reconcilePresets = (presets: Model[]) => {
     if (presets.length === 0) {
       return;
     }
-    const existing = new Set(this.models.map(m => `${m.repo}/${m.filename}`));
-    const toAdd = presets.filter(p => !existing.has(`${p.repo}/${p.filename}`));
-    if (toAdd.length === 0) {
+    const freshIds = new Set(presets.map(p => p.id));
+    const kept = this.models.filter(
+      m => !(m.isRulePreset && !m.isDownloaded && !freshIds.has(m.id)),
+    );
+    const existing = new Set(kept.map(m => m.id));
+    const toAdd = presets.filter(p => !existing.has(p.id));
+    if (kept.length === this.models.length && toAdd.length === 0) {
       return;
     }
     runInAction(() => {
-      this.models = [...this.models, ...toAdd];
+      this.models = [...kept, ...toAdd];
     });
   };
 

@@ -1,6 +1,34 @@
-import {Model, ModelOrigin, ModelType} from '../utils/types';
+import {HuggingFaceModel, Model, ModelOrigin, ModelType} from '../utils/types';
 import {chatTemplates} from '../utils/chat';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
+
+// The SmolVLM repo subset hfAsModel/addHFModel read: the LLM file plus both
+// mmproj siblings. Carrying this lets the download warning route through
+// downloadHFModel→addHFModel, which materializes the LLM + mmproj Models into
+// the store and downloads both, instead of looking up an id that was never
+// reconciled in.
+const LOOKIE_HF_MODEL = {
+  id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+  author: 'ggml-org',
+  url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
+  siblings: [
+    {
+      rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+      url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
+      size: 436806912,
+    },
+    {
+      rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      size: 108783360,
+    },
+    {
+      rfilename: 'mmproj-SmolVLM-500M-Instruct-f16.gguf',
+      url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-f16.gguf',
+      size: 199468800,
+    },
+  ],
+} as unknown as HuggingFaceModel;
 
 // Default model for the built-in Lookie pal. It is a vision model outside the
 // device-rule tiers, so it ships as a self-contained offline constant rather
@@ -38,6 +66,7 @@ export const LOOKIE_DEFAULT_MODEL: Model = {
   },
   defaultStopWords: ['<|endoftext|>', '<|im_end|>', '<end_of_utterance>'],
   stopWords: ['<|endoftext|>', '<|im_end|>', '<end_of_utterance>'],
+  hfModel: LOOKIE_HF_MODEL,
   hfModelFile: {
     rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
     url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',

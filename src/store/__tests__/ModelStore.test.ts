@@ -16,6 +16,7 @@ import {
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore, serverStore} from '..';
+import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
 import androidBundledRules from '../bundledDeviceRules/rules.android.json';
@@ -573,6 +574,56 @@ describe('ModelStore', () => {
 
       expect(modelStore.models).toHaveLength(1);
       expect(modelStore.models[0].origin).toBe(ModelOrigin.PRESET);
+    });
+  });
+
+  describe('built-in Lookie model download', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (RNFS as any).__resetMockState?.();
+      modelStore.models = [];
+      (downloadManager.syncWithActiveDownloads as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+    });
+
+    // Regression: SmolVLM is in no tier and was never reconciled into the store,
+    // so the warning's download tap must route through the model's own hfModel
+    // (downloadHFModel -> addHFModel), NOT a store id lookup. No tier seeding.
+    it('materializes the LLM + mmproj into the store and downloads both', async () => {
+      expect(LOOKIE_DEFAULT_MODEL.hfModel).toBeDefined();
+
+      await modelStore.downloadHFModel(
+        LOOKIE_DEFAULT_MODEL.hfModel!,
+        LOOKIE_DEFAULT_MODEL.hfModelFile!,
+        {enableVision: true},
+      );
+      // downloadHFModel kicks off checkSpaceAndDownload without awaiting it
+      // (it waits 200ms internally for mmproj materialization first); let the
+      // download chain settle before asserting.
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const llm = modelStore.models.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      const mmproj = modelStore.models.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+
+      expect(llm).toBeDefined();
+      expect(llm?.origin).toBe(ModelOrigin.HF);
+      expect(llm?.supportsMultimodal).toBe(true);
+      expect(mmproj).toBeDefined();
+      expect(mmproj?.downloadUrl).toContain('/resolve/main/');
+
+      // Vision-enabled, so both the LLM and its projection are downloaded.
+      expect(downloadManager.startDownload).toHaveBeenCalledTimes(2);
     });
   });
 

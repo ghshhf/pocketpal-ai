@@ -20,7 +20,10 @@ import {
 import {ModelSuggestion} from '../services/suggestions/types';
 import {registerSuggestionProducer} from '../services/suggestions/registry';
 
-import {bundledModelSuggestions} from './bundledModelSuggestions';
+import {
+  BUNDLED_SCHEMA_VERSION,
+  bundledModelSuggestions,
+} from './bundledModelSuggestions';
 
 type FetchState = 'idle' | 'fetching' | 'ok' | 'error';
 
@@ -36,14 +39,27 @@ class DeviceRulesStore {
   deviceSignals: DeviceSignals | null = null;
 
   private inFlight: Promise<void> | null = null;
+  private hydrationComplete: Promise<void>;
 
   constructor() {
     makeAutoObservable(this);
 
-    makePersistable(this, {
+    this.hydrationComplete = makePersistable(this, {
       name: 'DeviceRulesStore',
       properties: ['rules', 'rulesVersion', 'fetchedAt', 'deviceTier'],
       storage: AsyncStorage,
+    }).then(() => {
+      // Persisted rules from an older wire schema can be shaped differently
+      // (e.g. missing tiers); drop them so we re-fetch / fall back to the
+      // bundled snapshot rather than render a stale, mismatched cache.
+      if (this.rules && this.rules.schemaVersion !== BUNDLED_SCHEMA_VERSION) {
+        runInAction(() => {
+          this.rules = null;
+          this.rulesVersion = null;
+          this.fetchedAt = null;
+          this.fetchState = 'idle';
+        });
+      }
     });
 
     registerSuggestionProducer(
@@ -70,15 +86,19 @@ class DeviceRulesStore {
     if (!this.deviceTier) {
       return [];
     }
+    const bundledTier =
+      bundledModelSuggestions.tierSuggestions[this.platformKey][
+        this.deviceTier
+      ];
     if (this.rules) {
-      return buildSuggestionsForTier(
-        this.rules.tiers[this.deviceTier].candidates,
-        undefined,
-      );
+      // Tolerate a cached rules object whose tier map is shaped unexpectedly
+      // (older/partial wire schema) by falling back to the bundled floor.
+      const candidates = this.rules.tiers?.[this.deviceTier]?.candidates;
+      if (candidates) {
+        return buildSuggestionsForTier(candidates, undefined);
+      }
     }
-    return bundledModelSuggestions.tierSuggestions[this.platformKey][
-      this.deviceTier
-    ];
+    return bundledTier;
   }
 
   private get isStale(): boolean {
@@ -91,6 +111,10 @@ class DeviceRulesStore {
   // Read signals once, fetch+cache rules with TTL, classify into a tier. Safe
   // to call repeatedly; concurrent calls share one in-flight fetch.
   async ensureRules(force = false): Promise<void> {
+    // Let rehydration settle before fetching so a late-resolving hydrate can't
+    // overwrite freshly fetched rules with a stale persisted snapshot.
+    await this.hydrationComplete;
+
     if (this.inFlight) {
       return this.inFlight;
     }

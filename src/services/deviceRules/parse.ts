@@ -208,7 +208,8 @@ const parseHFModel = (v: unknown): RuleHFModel | null => {
     ? {
         ...(specsRaw as object),
         gguf: {
-          total: asNumber((specsRaw.gguf as Record<string, unknown>).total) ?? 0,
+          total:
+            asNumber((specsRaw.gguf as Record<string, unknown>).total) ?? 0,
           bos_token: asString(
             (specsRaw.gguf as Record<string, unknown>).bos_token,
           ),

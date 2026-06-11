@@ -326,7 +326,9 @@ describe('ModelStore', () => {
       });
 
       const matching = modelStore.models.filter(
-        m => `${m.repo}/${m.filename}` === 'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+        m =>
+          `${m.repo}/${m.filename}` ===
+          'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
       );
       expect(matching).toHaveLength(1);
       expect(matching[0].origin).toBe(ModelOrigin.PRESET);
@@ -346,7 +348,9 @@ describe('ModelStore', () => {
       });
 
       const matching = modelStore.models.filter(
-        m => `${m.repo}/${m.filename}` === 'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+        m =>
+          `${m.repo}/${m.filename}` ===
+          'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
       );
       expect(matching).toHaveLength(1);
       expect(matching[0].isDownloaded).toBe(true);

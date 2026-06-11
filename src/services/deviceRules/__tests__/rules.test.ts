@@ -40,7 +40,9 @@ const oldCandidatesDoc = {
   },
 };
 
-const mockFetch = (impl: () => Partial<Response> | Promise<Partial<Response>>) => {
+const mockFetch = (
+  impl: () => Partial<Response> | Promise<Partial<Response>>,
+) => {
   (global as unknown as {fetch: jest.Mock}).fetch = jest
     .fn()
     .mockImplementation(async () => impl());

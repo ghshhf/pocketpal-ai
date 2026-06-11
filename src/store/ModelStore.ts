@@ -627,8 +627,7 @@ class ModelStore {
     try {
       const signals = await readDeviceSignals();
       const fetched = await fetchRules();
-      const bundledRaw =
-        Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
+      const bundledRaw = Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
       const rules = fetched ?? parseDeviceRules(bundledRaw);
       const tier = classify(
         signals,
@@ -654,9 +653,7 @@ class ModelStore {
     if (presets.length === 0) {
       return;
     }
-    const existing = new Set(
-      this.models.map(m => `${m.repo}/${m.filename}`),
-    );
+    const existing = new Set(this.models.map(m => `${m.repo}/${m.filename}`));
     const toAdd = presets.filter(p => !existing.has(`${p.repo}/${p.filename}`));
     if (toAdd.length === 0) {
       return;

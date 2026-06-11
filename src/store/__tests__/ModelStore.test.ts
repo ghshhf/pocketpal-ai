@@ -18,6 +18,8 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 import {modelStore, uiStore, serverStore} from '..';
 import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 import {classify} from '../../services/deviceRules/classify';
+import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
+import {MODEL_LIST_VERSION} from '../ModelStore';
 import {parseDeviceRules} from '../../services/deviceRules/parse';
 import {fetchRules} from '../../services/deviceRules/rules';
 import {readDeviceSignals} from '../../services/deviceRules/signals';
@@ -335,6 +337,42 @@ describe('ModelStore', () => {
       expect(projSibling?.size).toBe(100);
     });
 
+    it('pairs the LLM stub with its projector stub via defaultProjectionModel', () => {
+      // The LLM stub's defaultProjectionModel must equal the projector stub's id
+      // so the download path (this.models.find(m => m.id === projModelId))
+      // resolves and the projector downloads alongside the LLM.
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const llm = presets.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      const proj = presets.find(m => /\/mmproj/i.test(m.id));
+      expect(llm?.defaultProjectionModel).toBe(proj?.id);
+      expect(llm?.compatibleProjectionModels).toContain(proj?.id);
+    });
+
+    it('feeds the projector size into the fit/space breakdown', () => {
+      // hasEnoughSpace sizes a vision model via getVisionModelSizeBreakdown,
+      // which reads the synthesized mmproj sibling. The projector size must add
+      // to the total so the ~1GB projector enters the pre-download fit check.
+      const [llm] = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const breakdown = getVisionModelSizeBreakdown(
+        llm.hfModelFile!,
+        llm.hfModel!,
+      );
+      expect(breakdown.hasProjection).toBe(true);
+      expect(breakdown.projectionSize).toBe(100);
+      expect(breakdown.llmSize).toBe(500);
+      expect(breakdown.totalSize).toBe(600);
+    });
+
     it('classifies the bundled floor (non-low) when offline', () => {
       // The bundled path must run rules through classify, not force the low
       // floor. A mid-tier device + a mid-only tier matrix resolves mid.
@@ -533,6 +571,15 @@ describe('ModelStore', () => {
 
       expect(modelStore.models).toHaveLength(1);
       expect(modelStore.models[0].origin).toBe(ModelOrigin.PRESET);
+    });
+  });
+
+  describe('model list version gate', () => {
+    it('pins MODEL_LIST_VERSION to the single data-driven bump', () => {
+      // The data-driven preset list is one re-merge bump (14 -> 15); a second
+      // bump would force-drop persisted user state. Lock it so it is not
+      // re-bumped silently.
+      expect(MODEL_LIST_VERSION).toBe(15);
     });
   });
 

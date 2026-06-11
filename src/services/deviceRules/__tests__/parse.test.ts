@@ -217,6 +217,34 @@ describe('parseDeviceRules', () => {
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
+  it('skips a candidate whose hf_filename contains a backslash separator', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'sub\\dir\\model.gguf',
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('skips a multimodal candidate whose mmproj.hf_repo has no slash', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+        mmproj: {
+          hf_repo: 'singlepart',
+          hf_filename: 'proj.gguf',
+          size_bytes: 100,
+        },
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
   it('derives the download url from a huggingface.co template', () => {
     const rules = parseDeviceRules(validRaw);
     // The candidate carries no url; the consumer derives it from repo+filename.

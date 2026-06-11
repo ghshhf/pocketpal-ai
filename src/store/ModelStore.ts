@@ -37,6 +37,11 @@ import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
 
 import {downloadManager} from '../services/downloads';
+import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
+import {
+  DeviceRules,
+  DeviceSignals,
+} from '../services/deviceRules/types';
 
 // Bump when the migration logic that re-merges the persisted model list
 // changes. Crossing this version runs the one-time prune-and-reconcile.
@@ -562,6 +567,46 @@ class ModelStore {
 
     // Check if we need to reload an auto-released model (for app restarts)
     this.checkAndReloadAutoReleasedModel();
+  };
+
+  // Materialize the device-tier preset list from rules. Each entry is the baked
+  // {hfModel, modelFile} subset hfAsModel reads, so the result is origin:HF,
+  // byte-identical to an HF-browser add. Vision entries also push their mmproj
+  // sibling Models (mirrors addHFModel) so the projection is resolvable for
+  // download. Deduped by {repo,filename}, first wins.
+  resolvePresetModels = (
+    rules: DeviceRules,
+    signals: DeviceSignals,
+  ): Model[] => {
+    const tier = classify(
+      signals,
+      rules.classifier,
+      Platform.OS as ClassifyPlatform,
+    );
+    const flat = rules.tiers[tier].models.flatMap(entry => {
+      const hfModel = entry.hfModel as unknown as HuggingFaceModel;
+      const llm = hfAsModel(hfModel, entry.modelFile);
+      const named = entry.name ? {...llm, name: entry.name} : llm;
+      if (named.supportsMultimodal) {
+        const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
+          hfAsModel(hfModel, file),
+        );
+        return [named, ...projModels];
+      }
+      return [named];
+    });
+
+    const seen = new Set<string>();
+    const presets: Model[] = [];
+    for (const model of flat) {
+      const key = `${model.repo}/${model.filename}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      presets.push(model);
+    }
+    return presets;
   };
 
   mergeModelLists = () => {

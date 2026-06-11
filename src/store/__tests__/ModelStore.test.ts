@@ -1,7 +1,7 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
 import {LlamaContext} from 'llama.rn';
-import {Alert} from 'react-native';
+import {Alert, Platform} from 'react-native';
 
 import {downloadManager} from '../../services/downloads';
 
@@ -164,6 +164,123 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].stopWords).toEqual(
         expect.arrayContaining(['custom_stop_1', 'custom_stop_2']),
       );
+    });
+  });
+
+  describe('resolvePresetModels', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    const midOnlyClassifier = {
+      ramBands: [{id: 'all', maxBytes: null}],
+      tierMatrix: [{ramBand: 'all', socClass: 'mid', tier: 'mid' as const}],
+      socModelToClass: {'Tensor G3': 'mid'},
+    };
+
+    const makeRules = (models: any[]) => ({
+      schemaVersion: '2.0.0-draft',
+      platform: 'android',
+      rulesVersion: '2026-06-10.1',
+      classifier: midOnlyClassifier,
+      tiers: {
+        low: {models: []},
+        mid: {models},
+        high: {models: []},
+        flagship: {models: []},
+      },
+    });
+
+    const signals = {ramBytes: 8 * 1e9, socModel: 'Tensor G3'};
+
+    const llmEntry = {
+      hfModel: {
+        id: 'ggml-org/gemma-3-1b-it-GGUF',
+        author: 'ggml-org',
+        url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF',
+        specs: {gguf: {total: 999885952}},
+      },
+      modelFile: {
+        rfilename: 'gemma-3-1b-it-Q4_K_M.gguf',
+        url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
+        size: 806058240,
+        oid: 'blob-oid',
+        lfs: {oid: 'lfs-oid', size: 806058240, pointerSize: 135},
+      },
+    };
+
+    it('materializes a tier LLM as an origin:HF Model with baked downloadUrl/oid/lfs', () => {
+      const presets = modelStore.resolvePresetModels(
+        makeRules([llmEntry]) as any,
+        signals as any,
+      );
+      expect(presets).toHaveLength(1);
+      const m = presets[0];
+      expect(m.origin).toBe(ModelOrigin.HF);
+      expect(m.id).toBe(
+        'ggml-org/gemma-3-1b-it-GGUF/gemma-3-1b-it-Q4_K_M.gguf',
+      );
+      expect(m.downloadUrl).toContain('/resolve/main/');
+      expect(m.hfModelFile?.oid).toBe('blob-oid');
+      expect(m.hfModelFile?.lfs?.oid).toBe('lfs-oid');
+    });
+
+    it('applies the optional curated name, else derives it', () => {
+      const named = {...llmEntry, name: 'My Curated Gemma'};
+      const [withName] = modelStore.resolvePresetModels(
+        makeRules([named]) as any,
+        signals as any,
+      );
+      expect(withName.name).toBe('My Curated Gemma');
+
+      const [derived] = modelStore.resolvePresetModels(
+        makeRules([llmEntry]) as any,
+        signals as any,
+      );
+      expect(derived.name).not.toBe('My Curated Gemma');
+      expect(derived.name).toBeTruthy();
+    });
+
+    it('expands a vision entry into the LLM plus its mmproj sibling Model', () => {
+      const visionEntry = {
+        hfModel: {
+          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+          author: 'ggml-org',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
+          siblings: [
+            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
+            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+          ],
+        },
+        modelFile: {
+          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
+        },
+      };
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionEntry]) as any,
+        signals as any,
+      );
+      const ids = presets.map(m => m.id);
+      expect(ids).toContain(
+        'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      expect(ids).toContain(
+        'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+    });
+
+    it('dedups a repeated {repo,filename}, first wins', () => {
+      const presets = modelStore.resolvePresetModels(
+        makeRules([llmEntry, llmEntry]) as any,
+        signals as any,
+      );
+      expect(presets).toHaveLength(1);
     });
   });
 

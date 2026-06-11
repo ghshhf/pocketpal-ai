@@ -2461,6 +2461,14 @@ class ModelStore {
       this.models = [...localModels, ...hfModels];
       this.version = 0;
       this.mergeModelLists(presets);
+
+      // mergeModelLists appends defaultStopWords onto existing stopWords to
+      // preserve user customizations; on the just-reset kept models that
+      // duplicates the seeded defaults. Dedup the affected models (distinct
+      // entries are preserved).
+      [...localModels, ...hfModels].forEach(model => {
+        model.stopWords = [...new Set(model.stopWords)];
+      });
     });
 
     // Re-fetch GGUF metadata with correct number types

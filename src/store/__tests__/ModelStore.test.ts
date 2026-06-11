@@ -639,6 +639,17 @@ describe('ModelStore', () => {
       // The device-appropriate rule presets are repopulated in-session.
       const presets = modelStore.models.filter(m => m.isRulePreset === true);
       expect(presets.length).toBeGreaterThan(0);
+
+      // Reset stop words contain no exact duplicates (the preset reconcile
+      // re-appends defaults onto the just-reset kept models).
+      const keptLocal = modelStore.models.find(
+        m => m.id === 'local/my-model.gguf',
+      ) as Model;
+      const keptHF = modelStore.models.find(
+        m => m.id === 'hf/repo/hf.gguf',
+      ) as Model;
+      expect(keptLocal.stopWords).toEqual([...new Set(keptLocal.stopWords)]);
+      expect(keptHF.stopWords).toEqual([...new Set(keptHF.stopWords)]);
     });
   });
 

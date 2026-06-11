@@ -1,24 +1,21 @@
 import {parseDeviceRules} from '../parse';
 
-const modelEntry = {
-  name: 'Gemma-3-1b-it (Q4_K_M)',
-  hfModel: {
-    id: 'ggml-org/gemma-3-1b-it-GGUF',
-    author: 'ggml-org',
-    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF',
-    specs: {gguf: {total: 999885952, bos_token: '<bos>', eos_token: '<eos>'}},
-  },
-  modelFile: {
-    rfilename: 'gemma-3-1b-it-Q4_K_M.gguf',
-    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
-    size: 806058240,
-    oid: 'abc123',
-    lfs: {oid: 'lfs-oid', size: 806058240, pointerSize: 135},
-  },
+const textCandidate = {
+  model: 'gemma-3-1b-it',
+  display_name: 'Gemma-3-1b-it (Q4_K_M)',
+  quant: 'q4_k_m',
+  hf_repo: 'ggml-org/gemma-3-1b-it-GGUF',
+  hf_filename: 'gemma-3-1b-it-Q4_K_M.gguf',
+  params: 999885952,
+  size_bytes: 806058240,
+  min_ram_gb: 2,
+  obs_tg: 30,
+  native_low_bit: false,
+  sha256: 'deadbeef',
 };
 
 const validRaw = {
-  schema_version: '2.0.0-draft',
+  schema_version: '1.2.0-draft',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
@@ -37,8 +34,14 @@ const validRaw = {
     tier_matrix: [{ram_band: '6-8', soc_class: 'mid', tier: 'mid'}],
   },
   tiers: {
-    mid: {models: [modelEntry]},
+    mid: {candidates: [textCandidate]},
   },
+};
+
+const withCandidate = (candidate: Record<string, unknown>) => {
+  const raw = JSON.parse(JSON.stringify(validRaw));
+  raw.tiers.mid.candidates = [candidate];
+  return raw;
 };
 
 describe('parseDeviceRules', () => {
@@ -51,50 +54,59 @@ describe('parseDeviceRules', () => {
     expect(rules.classifier.cpuHeuristic).toHaveLength(2);
   });
 
-  it('parses a tier model entry as a baked {hfModel, modelFile} pair', () => {
+  it('maps a wire candidate into the internal models array', () => {
     const rules = parseDeviceRules(validRaw);
-    const e = rules.tiers.mid.models[0];
-    expect(e.name).toBe('Gemma-3-1b-it (Q4_K_M)');
-    expect(e.hfModel.id).toBe('ggml-org/gemma-3-1b-it-GGUF');
-    expect(e.hfModel.author).toBe('ggml-org');
-    expect(e.hfModel.specs?.gguf?.total).toBe(999885952);
-    expect(e.modelFile.rfilename).toBe('gemma-3-1b-it-Q4_K_M.gguf');
-    expect(e.modelFile.url).toContain('/resolve/main/');
-    expect(e.modelFile.size).toBe(806058240);
-    expect(e.modelFile.oid).toBe('abc123');
-    expect(e.modelFile.lfs).toEqual({
-      oid: 'lfs-oid',
-      size: 806058240,
-      pointerSize: 135,
+    const c = rules.tiers.mid.models[0];
+    expect(c.model).toBe('gemma-3-1b-it');
+    expect(c.displayName).toBe('Gemma-3-1b-it (Q4_K_M)');
+    expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
+    expect(c.hfFilename).toBe('gemma-3-1b-it-Q4_K_M.gguf');
+    expect(c.params).toBe(999885952);
+    expect(c.sizeBytes).toBe(806058240);
+    expect(c.minRamGb).toBe(2);
+  });
+
+  it('drops informational fields the app ignores', () => {
+    const rules = parseDeviceRules(validRaw);
+    const c = rules.tiers.mid.models[0] as unknown as Record<string, unknown>;
+    expect(c.quant).toBeUndefined();
+    expect(c.obsTg).toBeUndefined();
+    expect(c.nativeLowBit).toBeUndefined();
+    expect(c.sha256).toBeUndefined();
+  });
+
+  it('parses a multimodal candidate with its explicit mmproj', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'gemma-4-e2b',
+        hf_repo: 'unsloth/gemma-4-E2B-it-GGUF',
+        hf_filename: 'gemma-4-E2B-it-Q4_0.gguf',
+        params: 4647450147,
+        size_bytes: 3041376384,
+        multimodal: true,
+        mmproj: {
+          hf_repo: 'unsloth/gemma-4-E2B-it-GGUF',
+          hf_filename: 'mmproj-BF16.gguf',
+          size_bytes: 986833728,
+          modalities: ['vision'],
+        },
+      }),
+    );
+    const c = rules.tiers.mid.models[0];
+    expect(c.multimodal).toBe(true);
+    expect(c.mmproj?.hfFilename).toBe('mmproj-BF16.gguf');
+    expect(c.mmproj?.sizeBytes).toBe(986833728);
+    expect(c.mmproj?.modalities).toEqual(['vision']);
+  });
+
+  it('omits an optional display_name when absent', () => {
+    const noName = withCandidate({
+      model: 'x',
+      hf_repo: 'a/b',
+      hf_filename: 'x.gguf',
     });
-  });
-
-  it('parses vision siblings with their downloadable url through', () => {
-    const vision = JSON.parse(JSON.stringify(validRaw));
-    vision.tiers.mid.models[0].hfModel.siblings = [
-      {
-        rfilename: 'mmproj-model-f16.gguf',
-        url: 'https://huggingface.co/org/repo/resolve/main/mmproj-model-f16.gguf',
-        size: 100,
-        oid: 'p1',
-        lfs: {oid: 'l1', size: 100, pointerSize: 135},
-      },
-    ];
-    const rules = parseDeviceRules(vision);
-    const sibling = rules.tiers.mid.models[0].hfModel.siblings?.[0];
-    expect(rules.tiers.mid.models[0].hfModel.siblings).toHaveLength(1);
-    expect(sibling?.rfilename).toBe('mmproj-model-f16.gguf');
-    // url must survive parse so the materialized mmproj Model is downloadable.
-    expect(sibling?.url).toContain('/resolve/main/');
-    expect(sibling?.oid).toBe('p1');
-    expect(sibling?.lfs?.oid).toBe('l1');
-  });
-
-  it('omits an optional name when absent', () => {
-    const noName = JSON.parse(JSON.stringify(validRaw));
-    delete noName.tiers.mid.models[0].name;
     const rules = parseDeviceRules(noName);
-    expect(rules.tiers.mid.models[0].name).toBeUndefined();
+    expect(rules.tiers.mid.models[0].displayName).toBeUndefined();
   });
 
   it('drops tier_matrix entries with a non-canonical tier', () => {
@@ -140,81 +152,133 @@ describe('parseDeviceRules', () => {
     expect(rules.tiers.flagship.models).toEqual([]);
   });
 
-  it('skips an entry missing a required field hfAsModel needs', () => {
+  it('skips a candidate missing a required field', () => {
     const broken = JSON.parse(JSON.stringify(validRaw));
-    broken.tiers.mid.models.push({
-      hfModel: {id: 'a/b', author: 'a', url: 'u'},
-      modelFile: {rfilename: 'x.gguf'}, // no url
+    broken.tiers.mid.candidates.push({
+      model: 'no-file',
+      hf_repo: 'a/b',
+      // no hf_filename
     });
     const rules = parseDeviceRules(broken);
     expect(rules.tiers.mid.models).toHaveLength(1);
   });
 
-  it('drops an entry whose modelFile url is not on huggingface.co', () => {
-    const offHost = JSON.parse(JSON.stringify(validRaw));
-    offHost.tiers.mid.models[0].modelFile.url =
-      'https://evil.example.com/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
-    const rules = parseDeviceRules(offHost);
+  it('skips a candidate whose hf_repo has no slash', () => {
+    const rules = parseDeviceRules(
+      withCandidate({model: 'x', hf_repo: 'singlepart', hf_filename: 'x.gguf'}),
+    );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
-  it('drops an entry whose modelFile url is http (not https) on huggingface.co', () => {
-    const insecure = JSON.parse(JSON.stringify(validRaw));
-    insecure.tiers.mid.models[0].modelFile.url =
-      'http://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
-    const rules = parseDeviceRules(insecure);
+  it('skips a candidate whose hf_repo has more than two parts', () => {
+    const rules = parseDeviceRules(
+      withCandidate({model: 'x', hf_repo: 'a/b/c', hf_filename: 'x.gguf'}),
+    );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
-  it('omits a sibling whose url is not on huggingface.co (keeps the entry)', () => {
-    const offHostSibling = JSON.parse(JSON.stringify(validRaw));
-    offHostSibling.tiers.mid.models[0].hfModel.siblings = [
-      {
-        rfilename: 'mmproj-good-f16.gguf',
-        url: 'https://huggingface.co/org/repo/resolve/main/mmproj-good-f16.gguf',
-      },
-      {
-        rfilename: 'mmproj-evil-f16.gguf',
-        url: 'https://evil.example.com/org/repo/resolve/main/mmproj-evil-f16.gguf',
-      },
-    ];
-    const rules = parseDeviceRules(offHostSibling);
-    const siblings = rules.tiers.mid.models[0].hfModel.siblings;
-    expect(siblings).toHaveLength(1);
-    expect(siblings?.[0].rfilename).toBe('mmproj-good-f16.gguf');
-  });
-
-  it('rejects an entry whose rfilename contains a path traversal', () => {
-    const traversal = JSON.parse(JSON.stringify(validRaw));
-    traversal.tiers.mid.models[0].modelFile.rfilename = '../../etc/passwd.gguf';
-    const rules = parseDeviceRules(traversal);
+  it('skips a candidate whose hf_repo has an empty part', () => {
+    const rules = parseDeviceRules(
+      withCandidate({model: 'x', hf_repo: 'a/', hf_filename: 'x.gguf'}),
+    );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
-  it('rejects an entry whose rfilename contains a path separator', () => {
-    const sep = JSON.parse(JSON.stringify(validRaw));
-    sep.tiers.mid.models[0].modelFile.rfilename = 'sub/dir/model.gguf';
-    const rules = parseDeviceRules(sep);
+  it('skips a candidate whose hf_filename contains a path traversal', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: '../../etc/passwd.gguf',
+      }),
+    );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
-  it('rejects an entry whose author contains a path traversal', () => {
-    const badAuthor = JSON.parse(JSON.stringify(validRaw));
-    badAuthor.tiers.mid.models[0].hfModel.author = '../../evil';
-    const rules = parseDeviceRules(badAuthor);
+  it('skips a candidate whose hf_filename contains a path separator', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'sub/dir/model.gguf',
+      }),
+    );
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
-  it('yields empty tiers for an old candidates[] schema doc', () => {
+  it('skips a candidate whose author contains a path traversal', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: '../../evil/repo',
+        hf_filename: 'x.gguf',
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('derives the download url from a huggingface.co template', () => {
+    const rules = parseDeviceRules(validRaw);
+    // The candidate carries no url; the consumer derives it from repo+filename.
+    // Re-derive here to assert the parsed parts compose the expected target.
+    const c = rules.tiers.mid.models[0];
+    const url = `https://huggingface.co/${c.hfRepo}/resolve/main/${c.hfFilename}`;
+    expect(url).toBe(
+      'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
+    );
+  });
+
+  it('drops a multimodal candidate whose mmproj segments are unsafe', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+        mmproj: {
+          hf_repo: 'a/b',
+          hf_filename: '../../proj.gguf',
+          size_bytes: 100,
+        },
+      }),
+    );
+    // A failing mmproj drops the whole candidate, not just the projector.
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('drops a multimodal candidate whose mmproj is missing', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('drops a multimodal candidate whose mmproj size_bytes is missing', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+        mmproj: {hf_repo: 'a/b', hf_filename: 'proj.gguf'},
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('yields empty tiers for an old fat models[] schema doc', () => {
     const old = JSON.parse(JSON.stringify(validRaw));
     old.tiers = {
       mid: {
-        candidates: [
+        models: [
           {
-            model: 'x',
-            quant: 'q4',
-            hf_repo: 'a/b',
-            hf_filename: 'x.gguf',
+            hfModel: {id: 'a/b', author: 'a', url: 'u'},
+            modelFile: {rfilename: 'x.gguf'},
           },
         ],
       },

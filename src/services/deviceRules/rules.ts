@@ -6,7 +6,7 @@ import {DeviceRules, Tier} from './types';
 
 // Online fetch of `rules.<platform>.json`. Returns null (→ bundled floor) on
 // any failure: network error, non-2xx, parse throw, platform mismatch, or a
-// parse that yields zero models across all tiers (the still-old hosted JSON).
+// parse that yields zero models across all tiers (an incompatible hosted JSON).
 // Never throws.
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -32,8 +32,8 @@ export async function fetchRules(
     if (rules.platform !== platform) {
       return null;
     }
-    // An old-schema (candidates[]) or otherwise model-less doc parses cleanly
-    // but resolves an empty list; fall to the bundled floor instead.
+    // An incompatible-schema or otherwise model-less doc parses cleanly but
+    // resolves an empty list; fall to the bundled floor instead.
     if (!hasAnyModels(rules)) {
       return null;
     }

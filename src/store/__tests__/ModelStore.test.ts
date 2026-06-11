@@ -203,7 +203,7 @@ describe('ModelStore', () => {
     };
 
     const makeRules = (models: any[]) => ({
-      schemaVersion: '2.0.0-draft',
+      schemaVersion: '1.2.0-draft',
       platform: 'android',
       rulesVersion: '2026-06-10.1',
       classifier: midOnlyClassifier,
@@ -217,25 +217,32 @@ describe('ModelStore', () => {
 
     const signals = {ramBytes: 8 * 1e9, socModel: 'Tensor G3'};
 
-    const llmEntry = {
-      hfModel: {
-        id: 'ggml-org/gemma-3-1b-it-GGUF',
-        author: 'ggml-org',
-        url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF',
-        specs: {gguf: {total: 999885952}},
-      },
-      modelFile: {
-        rfilename: 'gemma-3-1b-it-Q4_K_M.gguf',
-        url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
-        size: 806058240,
-        oid: 'blob-oid',
-        lfs: {oid: 'lfs-oid', size: 806058240, pointerSize: 135},
+    const llmCandidate = {
+      model: 'gemma-3-1b-it',
+      hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
+      hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
+      params: 999885952,
+      sizeBytes: 806058240,
+    };
+
+    const visionCandidate = {
+      model: 'smolvlm-500m',
+      hfRepo: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+      hfFilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+      params: 500000000,
+      sizeBytes: 500,
+      multimodal: true,
+      mmproj: {
+        hfRepo: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+        hfFilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+        sizeBytes: 100,
+        modalities: ['vision'],
       },
     };
 
-    it('materializes a tier LLM as an origin:HF Model with baked downloadUrl/oid/lfs', () => {
+    it('synthesizes a tier LLM into an origin:HF Model with a derived downloadUrl', () => {
       const presets = modelStore.resolvePresetModels(
-        makeRules([llmEntry]) as any,
+        makeRules([llmCandidate]) as any,
         signals as any,
       );
       expect(presets).toHaveLength(1);
@@ -244,13 +251,19 @@ describe('ModelStore', () => {
       expect(m.id).toBe(
         'ggml-org/gemma-3-1b-it-GGUF/gemma-3-1b-it-Q4_K_M.gguf',
       );
-      expect(m.downloadUrl).toContain('/resolve/main/');
-      expect(m.hfModelFile?.oid).toBe('blob-oid');
-      expect(m.hfModelFile?.lfs?.oid).toBe('lfs-oid');
+      expect(m.downloadUrl).toBe(
+        'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
+      );
+      expect(m.isRulePreset).toBe(true);
+      expect(m.size).toBe(806058240);
+      expect(m.params).toBe(999885952);
+      // HF-derivable data (oid/lfs) is not baked; it resolves at download.
+      expect(m.hfModelFile?.oid).toBeUndefined();
+      expect(m.hfModelFile?.lfs).toBeUndefined();
     });
 
-    it('applies the optional curated name, else derives it', () => {
-      const named = {...llmEntry, name: 'My Curated Gemma'};
+    it('applies the optional display_name, else derives it', () => {
+      const named = {...llmCandidate, displayName: 'My Curated Gemma'};
       const [withName] = modelStore.resolvePresetModels(
         makeRules([named]) as any,
         signals as any,
@@ -258,35 +271,16 @@ describe('ModelStore', () => {
       expect(withName.name).toBe('My Curated Gemma');
 
       const [derived] = modelStore.resolvePresetModels(
-        makeRules([llmEntry]) as any,
+        makeRules([llmCandidate]) as any,
         signals as any,
       );
       expect(derived.name).not.toBe('My Curated Gemma');
       expect(derived.name).toBeTruthy();
     });
 
-    it('expands a vision entry into the LLM plus its mmproj sibling Model', () => {
-      const visionEntry = {
-        hfModel: {
-          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
-          author: 'ggml-org',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
-          siblings: [
-            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {
-              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              size: 100,
-            },
-          ],
-        },
-        modelFile: {
-          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
-        },
-      };
+    it('expands a multimodal candidate into the LLM plus exactly one projector stub', () => {
       const presets = modelStore.resolvePresetModels(
-        makeRules([visionEntry]) as any,
+        makeRules([visionCandidate]) as any,
         signals as any,
       );
       const ids = presets.map(m => m.id);
@@ -296,99 +290,49 @@ describe('ModelStore', () => {
       expect(ids).toContain(
         'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
       );
+      // One LLM + one projector, never the old multi-quant sibling set.
+      expect(presets).toHaveLength(2);
+      const projectors = presets.filter(m => /\/mmproj/i.test(m.id));
+      expect(projectors).toHaveLength(1);
     });
 
-    it('dedups a repeated {repo,filename}, first wins', () => {
+    it('dedups a repeated candidate, first wins', () => {
       const presets = modelStore.resolvePresetModels(
-        makeRules([llmEntry, llmEntry]) as any,
+        makeRules([llmCandidate, llmCandidate]) as any,
         signals as any,
       );
       expect(presets).toHaveLength(1);
     });
 
-    it('materializes the projection sibling as a downloadable Model (baked url)', () => {
-      // The vision LLM pairs the projection id; the expansion must put the
-      // projection Model in the store so _downloadProjectionModelIfNeeded finds
-      // it by id. The mmproj sibling carries a baked /resolve/main/ url, so its
-      // downloadUrl is non-empty and checkSpaceAndDownload proceeds (it early-
-      // returns on !downloadUrl) — without that url vision never gets its mmproj.
-      const visionEntry = {
-        hfModel: {
-          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
-          author: 'ggml-org',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
-          siblings: [
-            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {
-              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              size: 100,
-            },
-          ],
-        },
-        modelFile: {
-          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
-        },
-      };
+    it('synthesizes the projector stub as a downloadable Model (derived url)', () => {
+      // The vision LLM pairs the projection id; the synthesized sibling must put
+      // the projector Model in the store so _downloadProjectionModelIfNeeded
+      // finds it by id, with a non-empty /resolve/main/ url so
+      // checkSpaceAndDownload does not early-return on !model.downloadUrl.
       const presets = modelStore.resolvePresetModels(
-        makeRules([visionEntry]) as any,
+        makeRules([visionCandidate]) as any,
         signals as any,
       );
       const proj = presets.find(m =>
         m.id.endsWith('/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf'),
       );
-      // Present by id AND downloadable: a non-empty /resolve/main/ url so
-      // checkSpaceAndDownload does not early-return on !model.downloadUrl.
       expect(proj).toBeDefined();
-      expect(proj?.downloadUrl).toContain('/resolve/main/');
-      expect(proj?.downloadUrl).not.toBe('');
+      expect(proj?.downloadUrl).toBe(
+        'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
     });
 
-    it('does not double-push an mmproj that is also a top-level tier entry', () => {
-      // A vision LLM expands to [llm, mmproj]; if the SAME mmproj is also listed
-      // as its own top-level tier entry, the {repo,filename} dedup must collapse
-      // it to a single Model (no duplicate card, no double download).
-      const visionEntry = {
-        hfModel: {
-          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
-          author: 'ggml-org',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
-          siblings: [
-            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
-            {
-              rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-              size: 100,
-            },
-          ],
-        },
-        modelFile: {
-          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
-        },
-      };
-      // The mmproj also listed directly as a separate tier entry.
-      const mmprojEntry = {
-        hfModel: {
-          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
-          author: 'ggml-org',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
-        },
-        modelFile: {
-          rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
-        },
-      };
-      const presets = modelStore.resolvePresetModels(
-        makeRules([visionEntry, mmprojEntry]) as any,
+    it('carries the projector size on the LLM so the fit check can add it', () => {
+      // min_ram_gb may exclude projector memory; the synthesized mmproj sibling
+      // carries its size so getVisionModelSizeBreakdown adds it to the fit check.
+      const [llm] = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
         signals as any,
       );
-      const mmprojId =
-        'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf';
-      expect(presets.filter(m => m.id === mmprojId)).toHaveLength(1);
-      // LLM + single mmproj only.
-      expect(presets).toHaveLength(2);
+      const projSibling = llm.hfModel?.siblings?.find(s =>
+        /mmproj/i.test(s.rfilename),
+      );
+      expect(projSibling?.size).toBe(100);
     });
 
     it('classifies the bundled floor (non-low) when offline', () => {
@@ -396,7 +340,7 @@ describe('ModelStore', () => {
       // floor. A mid-tier device + a mid-only tier matrix resolves mid.
       const tier = classify(
         signals as any,
-        makeRules([llmEntry]).classifier as any,
+        makeRules([llmCandidate]).classifier as any,
         'android',
       );
       expect(tier).toBe('mid');
@@ -412,10 +356,10 @@ describe('ModelStore', () => {
       savedOS = Platform.OS;
     });
 
-    // Projection (mmproj) Models are materialized from hfModel.siblings[], which
-    // carry a baked /resolve/main/ url — so EVERY resolved preset, LLM and
-    // mmproj alike, has a non-empty downloadUrl and is downloadable (a vision
-    // preset's mmproj would never download otherwise).
+    // Projector (mmproj) Models are synthesized from the candidate's explicit
+    // mmproj into a sibling with a derived /resolve/main/ url — so EVERY resolved
+    // preset, LLM and projector alike, has a non-empty downloadUrl and is
+    // downloadable (a vision preset's projector would never download otherwise).
     const isProjection = (id: string) => /\/mmproj/i.test(id);
 
     it('android: parses + classifies non-low and resolves origin:HF presets', () => {
@@ -450,10 +394,10 @@ describe('ModelStore', () => {
       }
     });
 
-    it('every materialized mmproj projection carries a downloadable url', () => {
-      // Regression lock: vision siblings must bake `url` so the materialized
-      // mmproj Model is downloadable (checkSpaceAndDownload early-returns on
-      // !downloadUrl). Walk both platforms; require at least one projection.
+    it('every synthesized mmproj projection carries a downloadable url', () => {
+      // Regression lock: the synthesized projector sibling must carry a derived
+      // url so the projector Model is downloadable (checkSpaceAndDownload early-
+      // returns on !downloadUrl). Walk both platforms; require at least one.
       let sawProjection = false;
       for (const [os, raw] of [
         ['android', androidBundledRules],
@@ -478,7 +422,7 @@ describe('ModelStore', () => {
       expect(sawProjection).toBe(true);
     });
 
-    it('android: every resolved LLM carries baked oid/lfs from the file', () => {
+    it('android: resolved LLMs defer oid/lfs to download (none baked)', () => {
       Platform.OS = 'android';
       const rules = parseDeviceRules(androidBundledRules);
       const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
@@ -486,8 +430,9 @@ describe('ModelStore', () => {
       const llms = presets.filter(m => !isProjection(m.id));
       expect(llms.length).toBeGreaterThan(0);
       for (const m of llms) {
-        expect(m.hfModelFile?.oid).toBeTruthy();
-        expect(m.hfModelFile?.lfs?.oid).toBeTruthy();
+        // Thin stubs carry no baked oid/lfs; they self-heal at download.
+        expect(m.hfModelFile?.oid).toBeUndefined();
+        expect(m.hfModelFile?.lfs).toBeUndefined();
       }
     });
 
@@ -725,7 +670,7 @@ describe('ModelStore', () => {
 
     it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
       const fetchedRules = parseDeviceRules({
-        schema_version: '2.0.0-draft',
+        schema_version: '1.2.0-draft',
         platform: 'android',
         rules_version: '2999-01-01.1',
         classifier: {
@@ -735,17 +680,11 @@ describe('ModelStore', () => {
         },
         tiers: {
           mid: {
-            models: [
+            candidates: [
               {
-                hfModel: {
-                  id: 'ggml-org/fetched-repo',
-                  author: 'ggml-org',
-                  url: 'https://huggingface.co/ggml-org/fetched-repo',
-                },
-                modelFile: {
-                  rfilename: 'fetched.gguf',
-                  url: 'https://huggingface.co/ggml-org/fetched-repo/resolve/main/fetched.gguf',
-                },
+                model: 'fetched',
+                hf_repo: 'ggml-org/fetched-repo',
+                hf_filename: 'fetched.gguf',
               },
             ],
           },

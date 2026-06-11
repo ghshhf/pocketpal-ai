@@ -1,30 +1,26 @@
 import {fetchRules} from '../rules';
 
-const modelEntry = {
-  hfModel: {
-    id: 'ggml-org/gemma-3-1b-it-GGUF',
-    author: 'ggml-org',
-    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF',
-  },
-  modelFile: {
-    rfilename: 'gemma-3-1b-it-Q4_K_M.gguf',
-    url: 'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
-  },
+const thinCandidate = {
+  model: 'gemma-3-1b-it',
+  hf_repo: 'ggml-org/gemma-3-1b-it-GGUF',
+  hf_filename: 'gemma-3-1b-it-Q4_K_M.gguf',
+  params: 999885952,
+  size_bytes: 806058240,
 };
 
 const newSchemaDoc = {
-  schema_version: '2.0.0-draft',
+  schema_version: '1.2.0-draft',
   platform: 'android',
   rules_version: '2026-06-10.1',
   classifier: {
     ram_bands: [{id: 'all', max_bytes: null}],
     tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
   },
-  tiers: {mid: {models: [modelEntry]}},
+  tiers: {mid: {candidates: [thinCandidate]}},
 };
 
-const oldCandidatesDoc = {
-  schema_version: '1.0.0-draft',
+const oldFatDoc = {
+  schema_version: '2.0.0-draft',
   platform: 'android',
   rules_version: '2026-06-09.1',
   classifier: {
@@ -33,8 +29,11 @@ const oldCandidatesDoc = {
   },
   tiers: {
     mid: {
-      candidates: [
-        {model: 'x', quant: 'q4', hf_repo: 'a/b', hf_filename: 'x.gguf'},
+      models: [
+        {
+          hfModel: {id: 'a/b', author: 'a', url: 'u'},
+          modelFile: {rfilename: 'x.gguf'},
+        },
       ],
     },
   },
@@ -54,15 +53,15 @@ describe('fetchRules', () => {
     delete (global as unknown as {fetch?: unknown}).fetch;
   });
 
-  it('returns parsed rules for a valid new-schema doc', async () => {
+  it('returns parsed rules for a valid thin candidates doc', async () => {
     mockFetch(() => ({ok: true, json: async () => newSchemaDoc}));
     const rules = await fetchRules('android');
     expect(rules).not.toBeNull();
     expect(rules?.tiers.mid.models).toHaveLength(1);
   });
 
-  it('returns null (→ bundled floor) for an old candidates[] schema doc', async () => {
-    mockFetch(() => ({ok: true, json: async () => oldCandidatesDoc}));
+  it('returns null (→ bundled floor) for an old fat models[] schema doc', async () => {
+    mockFetch(() => ({ok: true, json: async () => oldFatDoc}));
     expect(await fetchRules('android')).toBeNull();
   });
 

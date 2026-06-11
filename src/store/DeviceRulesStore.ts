@@ -5,11 +5,22 @@ import {makePersistable} from 'mobx-persist-store';
 
 import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
 import {parseDeviceRules} from '../services/deviceRules/parse';
-import {createDeviceRulesProducer} from '../services/deviceRules/producer';
+import {
+  buildSuggestionsForTier,
+  createDeviceRulesProducer,
+} from '../services/deviceRules/producer';
 import {getRulesUrl} from '../services/deviceRules/rulesUrls';
 import {readDeviceSignals} from '../services/deviceRules/signals';
-import {DeviceRules, DeviceSignals, Tier} from '../services/deviceRules/types';
+import {
+  Classifier,
+  DeviceRules,
+  DeviceSignals,
+  Tier,
+} from '../services/deviceRules/types';
+import {ModelSuggestion} from '../services/suggestions/types';
 import {registerSuggestionProducer} from '../services/suggestions/registry';
+
+import {bundledModelSuggestions} from './bundledModelSuggestions';
 
 type FetchState = 'idle' | 'fetching' | 'ok' | 'error';
 
@@ -36,17 +47,38 @@ class DeviceRulesStore {
     });
 
     registerSuggestionProducer(
-      createDeviceRulesProducer(() => ({
-        rules: this.effectiveRules,
-        tier: this.deviceTier,
-      })),
+      createDeviceRulesProducer(() => this.tierSuggestions),
     );
   }
 
-  // Online rules take precedence; offline floor (bundled snapshot) is wired in
-  // a later step. Until then this is simply the fetched/cached rules.
-  get effectiveRules(): DeviceRules | null {
-    return this.rules;
+  private get platformKey(): 'android' | 'ios' {
+    return Platform.OS === 'ios' ? 'ios' : 'android';
+  }
+
+  // Online (remote/cached) rules are the override; the bundled snapshot is the
+  // offline floor for classification when no rules are present.
+  private get effectiveClassifier(): Classifier {
+    return (
+      this.rules?.classifier ??
+      bundledModelSuggestions.classifiers[this.platformKey]
+    );
+  }
+
+  // Suggestions for the resolved tier: from remote/cached rules when present,
+  // otherwise from the bundled snapshot (offline floor). Never merged.
+  get tierSuggestions(): ModelSuggestion[] {
+    if (!this.deviceTier) {
+      return [];
+    }
+    if (this.rules) {
+      return buildSuggestionsForTier(
+        this.rules.tiers[this.deviceTier].candidates,
+        undefined,
+      );
+    }
+    return bundledModelSuggestions.tierSuggestions[this.platformKey][
+      this.deviceTier
+    ];
   }
 
   private get isStale(): boolean {
@@ -136,13 +168,12 @@ class DeviceRulesStore {
 
   private resolveTier(): void {
     const signals = this.deviceSignals;
-    const rules = this.effectiveRules;
-    if (!signals || !rules) {
+    if (!signals) {
       return;
     }
     const tier = classify(
       signals,
-      rules.classifier,
+      this.effectiveClassifier,
       Platform.OS as ClassifyPlatform,
     );
     runInAction(() => {

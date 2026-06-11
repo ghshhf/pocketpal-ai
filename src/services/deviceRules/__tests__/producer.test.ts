@@ -1,5 +1,9 @@
-import {buildSuggestionsForTier, createDeviceRulesProducer} from '../producer';
-import {DeviceRules, RuleCandidate} from '../types';
+import {
+  buildSuggestionsForTier,
+  createDeviceRulesProducer,
+  recomputeFitsDevice,
+} from '../producer';
+import {RuleCandidate} from '../types';
 
 const candidate = (overrides: Partial<RuleCandidate> = {}): RuleCandidate => ({
   model: 'gemma-3-1b',
@@ -90,37 +94,34 @@ describe('buildSuggestionsForTier', () => {
   });
 });
 
-describe('createDeviceRulesProducer', () => {
-  const rules: DeviceRules = {
-    schemaVersion: '1.1.0-draft',
-    platform: 'android',
-    rulesVersion: '2026-06-10.1',
-    classifier: {ramBands: [], tierMatrix: []},
-    tiers: {
-      low: {candidates: [candidate()]},
-      mid: {candidates: []},
-      high: {candidates: []},
-      flagship: {candidates: []},
-    },
-  };
+describe('recomputeFitsDevice', () => {
+  it('recomputes fitsDevice against the actual device RAM', () => {
+    const base = buildSuggestionsForTier(
+      [candidate({minRamGb: 16})],
+      undefined,
+    );
+    expect(base[0].fitsDevice).toBe(true); // device-independent bake
 
-  it('returns empty when rules or tier is null', () => {
-    expect(
-      createDeviceRulesProducer(() => ({
-        rules: null,
-        tier: null,
-      })).getSuggestions({}),
-    ).toEqual([]);
-    expect(
-      createDeviceRulesProducer(() => ({rules, tier: null})).getSuggestions({}),
-    ).toEqual([]);
+    const recomputed = recomputeFitsDevice(base, 8 * GiB);
+    expect(recomputed[0].fitsDevice).toBe(false);
+  });
+});
+
+describe('createDeviceRulesProducer', () => {
+  const tierSuggestions = buildSuggestionsForTier(
+    [candidate({minRamGb: 16})],
+    undefined,
+  );
+
+  it('returns empty when there are no tier suggestions', () => {
+    expect(createDeviceRulesProducer(() => []).getSuggestions({})).toEqual([]);
   });
 
-  it('projects the resolved tier candidates', () => {
-    const producer = createDeviceRulesProducer(() => ({rules, tier: 'low'}));
+  it('projects suggestions and recomputes fitsDevice', () => {
+    const producer = createDeviceRulesProducer(() => tierSuggestions);
     const out = producer.getSuggestions({ramBytes: 8 * GiB});
     expect(out).toHaveLength(1);
     expect(out[0].source).toBe('device-rules');
-    expect(out[0].displayName).toBe('gemma-3-1b');
+    expect(out[0].fitsDevice).toBe(false);
   });
 });

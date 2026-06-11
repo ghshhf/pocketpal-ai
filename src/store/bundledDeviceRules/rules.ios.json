@@ -4,47 +4,6 @@
   "platform": "ios",
   "rules_version": "2026-06-10.1",
   "generated_at": "2026-06-10T00:00:00Z",
-  "notes": "FOU-99 ios — per-tier candidates curated via the update-device-rules skill (research + judgment), formatted by gen-device-rules.py in the advisory repo. tg + fit validated against community benchmarks; min_ram hand-measured (MODELRULES-2). Native 1.58-bit (Bonsai) shipped as alternates; lossy sub-3-bit excluded. primary = best general model per tier. Classifier/tier_matrix unchanged.",
-  "_status": "v1-partial-measured",
-  "_quant_policy": "Q4_K_M is primary for Q4 family on Metal (no Q4_0 fastpath like Android Hex). Metal HAS a Q1_0 fastpath that Android lacks — Bonsai variants are real speed+footprint plays on iOS.",
-  "_selection_policy": {
-    "rule": "Candidate enters tier T iff (Metal TG ngl=99 on rep_device[T] >= tier_floors_metal_tg[T]) AND (peak_load_mem fits ram_band[T] with iOS jetsam margin). Within a tier, candidates are ORDERED — first per model is the primary recommendation.",
-    "tier_floors_metal_tg": {
-      "low": 5,
-      "mid": 8,
-      "high": 10,
-      "flagship": 12
-    },
-    "rep_devices": {
-      "low": {
-        "name": "iPhone XR / iPhone 11",
-        "chip": "A12 / A13",
-        "ram_band": "3-4"
-      },
-      "mid": {
-        "name": "iPhone 13 Pro (iPhone14,2)",
-        "chip": "A15",
-        "ram_band": "4-6"
-      },
-      "high": {
-        "name": "iPhone 15 / iPhone 16",
-        "chip": "A16 / A18",
-        "ram_band": "6-8"
-      },
-      "flagship_A": {
-        "name": "iPhone 17 Pro / Pro Max / Air",
-        "chip": "A18 Pro / A19 / A19 Pro",
-        "ram_band": "8-plus"
-      },
-      "flagship_M": {
-        "name": "iPad Pro M2+ / iPad Air M3+",
-        "chip": "M2 / M3 / M4 / M5",
-        "ram_band": "8-plus"
-      }
-    },
-    "flagship_split_note": "Flagship is bifurcated: A-Pro iPhones ≈ 12-15 TG vs M-series 22-29 TG on 3-4B Q4_K_M. Floor is checked on flagship_A (conservative); numbers that only clear on M-series are listed but flagged as 'iPad/Mac usable'.",
-    "os_killer_margin": "iOS jetsam: 6 GiB iPhone tolerates ~1.7 GB peak (Bonsai-8B Q1_0); 8 GiB iPhone ~3-3.5 GB; M-series iPad 8+ GiB ~6 GB. Used to exclude Qwen3.5-9B Q4_K_M on 8 GiB iPhones."
-  },
   "classifier": {
     "ram_bands": [
       {
@@ -73,11 +32,7 @@
         "label": "8+ GiB"
       }
     ],
-    "soc_classes": [
-      "entry",
-      "mid",
-      "flagship"
-    ],
+    "soc_classes": ["entry", "mid", "flagship"],
     "device_id_to_chip": {
       "iPhone10,1": "A11",
       "iPhone10,2": "A11",
@@ -319,7 +274,7 @@
           "size_bytes": 806058240,
           "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
           "min_ram_gb": 1.8,
-          "obs_tg": 30.0
+          "obs_tg": 30
         },
         {
           "model": "bonsai-1.7b",
@@ -389,7 +344,7 @@
           "params": 2031739904,
           "size_bytes": 1282439584,
           "sha256": "72c5c3cb38fa32d5256e2fe30d03e7a64c6c79e668ad84057e3bd66e250b24fb",
-          "min_ram_gb": 2.0,
+          "min_ram_gb": 2,
           "obs_tg": 23.8
         },
         {
@@ -451,7 +406,7 @@
           "size_bytes": 3106736256,
           "sha256": "9378bc471710229ef165709b62e34bfb62231420ddaf6d729e727305b5b8672d",
           "min_ram_gb": 4.1,
-          "obs_tg": 33.0,
+          "obs_tg": 33,
           "multimodal": true
         },
         {
@@ -475,7 +430,7 @@
           "size_bytes": 2146498528,
           "sha256": "fec9d28c7f8dab7c6857d54b56c8264cce57d6f6d9003bd4110f6457f071c65a",
           "min_ram_gb": 3.4,
-          "obs_tg": 36.0
+          "obs_tg": 36
         },
         {
           "model": "bonsai-8b",
@@ -486,7 +441,7 @@
           "size_bytes": 1158654496,
           "sha256": "284a335aa3fb2ced3b1b01fcb40b08aa783e3b70832767f0dd2e3fdfa134bd54",
           "min_ram_gb": 2.1,
-          "obs_tg": 20.0,
+          "obs_tg": 20,
           "native_low_bit": true
         },
         {

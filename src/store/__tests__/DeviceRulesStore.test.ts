@@ -97,7 +97,7 @@ describe('DeviceRulesStore', () => {
     global.fetch = realFetch;
   });
 
-  it('fetches, parses, caches, and classifies a tier (scenario A)', async () => {
+  it('fetches, parses, caches, and classifies a tier', async () => {
     const rules = makeRules();
     global.fetch = okFetch(wireRules(rules)) as any;
 
@@ -110,7 +110,7 @@ describe('DeviceRulesStore', () => {
     expect(store.fetchedAt).not.toBeNull();
   });
 
-  it('keeps cached rules and reports error on fetch failure (scenario C/9b)', async () => {
+  it('keeps cached rules and reports error on fetch failure', async () => {
     const rules = makeRules();
     global.fetch = okFetch(wireRules(rules)) as any;
     const store = new DeviceRulesStore();
@@ -124,7 +124,7 @@ describe('DeviceRulesStore', () => {
     expect(store.deviceTier).toBe('mid');
   });
 
-  it('reports error and keeps no rules on malformed JSON with no cache (9f)', async () => {
+  it('reports error and keeps no rules on malformed JSON with no cache', async () => {
     global.fetch = okFetch({garbage: true}) as any;
     const store = new DeviceRulesStore();
     await store.ensureRules();
@@ -133,7 +133,7 @@ describe('DeviceRulesStore', () => {
     expect(store.rules).toBeNull();
   });
 
-  it('errors on platform mismatch (9e)', async () => {
+  it('errors on platform mismatch', async () => {
     const rules = makeRules({platform: 'android'});
     global.fetch = okFetch(wireRules(rules)) as any;
     const store = new DeviceRulesStore();
@@ -157,7 +157,7 @@ describe('DeviceRulesStore', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('classifies and serves bundled suggestions when offline with no cache (scenario B)', async () => {
+  it('classifies and serves bundled suggestions when offline with no cache', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as any;
     const store = new DeviceRulesStore();
     await store.ensureRules();
@@ -173,7 +173,7 @@ describe('DeviceRulesStore', () => {
     );
   });
 
-  it('tolerates draft rules without render fields (9m)', async () => {
+  it('tolerates draft rules without render fields', async () => {
     const rules = makeRules();
     const wire = wireRules(rules);
     delete (wire.tiers.mid.candidates[0] as any).size_bytes;

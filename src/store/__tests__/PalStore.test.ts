@@ -160,7 +160,7 @@ describe('PalStore', () => {
 
       expect(lookieCall).toBeDefined();
       expect(lookieCall![0].defaultModel).toBe(LOOKIE_DEFAULT_MODEL);
-      // No HF resolve / network call at pal init (D15, scenario G/9n).
+      // No HF resolve / network call at pal init.
       expect(resolveHFModelForDownload).not.toHaveBeenCalled();
     });
 

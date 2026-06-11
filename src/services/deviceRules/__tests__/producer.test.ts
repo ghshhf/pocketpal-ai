@@ -46,12 +46,12 @@ describe('buildSuggestionsForTier', () => {
     ]);
   });
 
-  it('dedups identical {repo,filename} keys (9j)', () => {
+  it('dedups identical {repo,filename} keys', () => {
     const out = buildSuggestionsForTier([candidate(), candidate()], 8 * GiB);
     expect(out).toHaveLength(1);
   });
 
-  it('sets fitsDevice from minRamGb vs device RAM (D11)', () => {
+  it('sets fitsDevice from minRamGb vs device RAM', () => {
     const out = buildSuggestionsForTier(
       [
         candidate({model: 'big', minRamGb: 16, hfFilename: 'big.gguf'}),
@@ -63,7 +63,7 @@ describe('buildSuggestionsForTier', () => {
     expect(out.find(s => s.displayName === 'small')?.fitsDevice).toBe(true);
   });
 
-  it('defaults fitsDevice true when minRamGb is absent (9k/9m)', () => {
+  it('defaults fitsDevice true when minRamGb is absent', () => {
     const out = buildSuggestionsForTier(
       [candidate({minRamGb: undefined})],
       8 * GiB,
@@ -71,7 +71,7 @@ describe('buildSuggestionsForTier', () => {
     expect(out[0].fitsDevice).toBe(true);
   });
 
-  it('carries optional render fields and degrades when absent (9m draft)', () => {
+  it('carries optional render fields and degrades when absent', () => {
     const withFields = buildSuggestionsForTier([candidate()], 8 * GiB)[0];
     expect(withFields.sizeBytes).toBe(806058240);
     expect(withFields.params).toBe(999885952);

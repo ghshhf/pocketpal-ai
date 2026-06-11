@@ -40,7 +40,7 @@ describe('dedupSuggestions', () => {
     expect(out).toHaveLength(0);
   });
 
-  it('suppresses by reconciled {author,repo,filename} when ids differ (9l)', () => {
+  it('suppresses by reconciled {author,repo,filename} when ids differ', () => {
     const legacy = model({
       id: 'legacy-curated-id',
       author: 'ggml-org',

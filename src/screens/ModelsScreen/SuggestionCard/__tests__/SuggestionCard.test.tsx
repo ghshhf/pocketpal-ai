@@ -69,7 +69,7 @@ describe('SuggestionCard', () => {
     expect(getByTestId('suggestion-lowbit-badge')).toBeTruthy();
   });
 
-  it('resolves then downloads on tap (I3 path)', async () => {
+  it('resolves then downloads on tap', async () => {
     const {getByTestId} = render(<SuggestionCard suggestion={suggestion()} />);
 
     fireEvent.press(getByTestId('suggestion-download-button'));

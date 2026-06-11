@@ -54,7 +54,7 @@ describe('parseDeviceRules', () => {
     expect(c.sha256).toBe('deadbeef');
   });
 
-  it('tolerates a draft file missing size_bytes/sha256/params (9m)', () => {
+  it('tolerates a draft file missing size_bytes/sha256/params', () => {
     const draft = JSON.parse(JSON.stringify(validRaw));
     delete draft.tiers.mid.candidates[0].size_bytes;
     delete draft.tiers.mid.candidates[0].sha256;
@@ -68,7 +68,7 @@ describe('parseDeviceRules', () => {
     expect(c.hfRepo).toBe('ggml-org/gemma-3-1b-it-GGUF');
   });
 
-  it('ignores unknown top-level / candidate fields (D7)', () => {
+  it('ignores unknown top-level / candidate fields', () => {
     const extra = {
       ...validRaw,
       $schema: 'http://x',
@@ -78,7 +78,7 @@ describe('parseDeviceRules', () => {
     expect(() => parseDeviceRules(extra)).not.toThrow();
   });
 
-  it('throws on a structurally invalid file (9f)', () => {
+  it('throws on a structurally invalid file', () => {
     expect(() => parseDeviceRules(null)).toThrow();
     expect(() => parseDeviceRules({})).toThrow();
     expect(() =>

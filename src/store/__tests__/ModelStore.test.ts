@@ -104,7 +104,7 @@ describe('ModelStore', () => {
       expect(modelStore.models).toHaveLength(0);
     });
 
-    it('keeps a downloaded legacy PRESET model regardless of origin (scenario D)', () => {
+    it('keeps a downloaded legacy PRESET model regardless of origin', () => {
       const downloadedPreset = {...presetModelFixture, isDownloaded: true};
       modelStore.models = [downloadedPreset];
 

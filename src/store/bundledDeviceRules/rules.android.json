@@ -4,40 +4,6 @@
   "platform": "android",
   "rules_version": "2026-06-10.1",
   "generated_at": "2026-06-10T00:00:00Z",
-  "notes": "FOU-99 android — per-tier candidates curated via the update-device-rules skill (research + judgment), formatted by gen-device-rules.py in the advisory repo. tg + fit validated against community benchmarks; min_ram hand-measured (MODELRULES-2). Native 1.58-bit (Bonsai) shipped as alternates; lossy sub-3-bit excluded. primary = best general model per tier. Classifier/tier_matrix unchanged.",
-  "_quant_policy": "Within each tier, candidates are ORDERED — first per model is the primary recommendation. For ≥3B models Q4_0 is primary (Hex 5× PP speedup, lower load mem); sub-1B uses Q4_K_M.",
-  "_selection_policy": {
-    "rule": "Candidate enters tier T iff (CPU TG on rep_device[T] >= tier_floors_cpu_tg[T]) AND (peak_load_mem fits ram_band[T] with OS-killer margin). Accelerators may exceed floor but don't change membership.",
-    "tier_floors_cpu_tg": {
-      "low": 5,
-      "mid": 8,
-      "high": 10,
-      "flagship": 12
-    },
-    "rep_devices": {
-      "low": {
-        "name": "OnePlus 6 / Helio G88",
-        "soc": "SD 845 / Helio G88",
-        "ram_band": "4-6"
-      },
-      "mid": {
-        "name": "Pixel 7a (lynx) / Pixel 8 (shiba)",
-        "soc": "Tensor G2 / G3",
-        "ram_band": "6-8"
-      },
-      "high": {
-        "name": "Galaxy S23 / POCO X7 Pro",
-        "soc": "SD 8 Gen 2 / Dim 8400",
-        "ram_band": "6-8"
-      },
-      "flagship": {
-        "name": "POCO F8 Ultra (Myron)",
-        "soc": "SD 8 Elite Gen 5",
-        "ram_band": "12-plus"
-      }
-    },
-    "os_killer_margin": "Android lowmemorykiller: leave ~25-35% of physical RAM as headroom. Used to exclude Bonsai-8B on 6 GiB and Qwen3.5-9B Q4_K_M on 8 GiB."
-  },
   "classifier": {
     "ram_bands": [
       {
@@ -66,11 +32,7 @@
         "label": "12+ GiB"
       }
     ],
-    "soc_classes": [
-      "budget",
-      "mid",
-      "flagship"
-    ],
+    "soc_classes": ["budget", "mid", "flagship"],
     "soc_model_to_class": {
       "SM8850": "flagship",
       "SM8750": "flagship",
@@ -185,17 +147,13 @@
       "rules": [
         {
           "match": {
-            "features_any": [
-              "i8mm"
-            ]
+            "features_any": ["i8mm"]
           },
           "class": "flagship"
         },
         {
           "match": {
-            "features_any": [
-              "sve2"
-            ]
+            "features_any": ["sve2"]
           },
           "class": "flagship"
         },
@@ -207,18 +165,14 @@
         },
         {
           "match": {
-            "features_all": [
-              "dotprod"
-            ],
+            "features_all": ["dotprod"],
             "max_freq_mhz_min": 2400
           },
           "class": "mid"
         },
         {
           "match": {
-            "features_all": [
-              "dotprod"
-            ]
+            "features_all": ["dotprod"]
           },
           "class": "mid"
         },
@@ -318,7 +272,7 @@
           "params": 999885952,
           "size_bytes": 806058240,
           "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-          "min_ram_gb": 2.0,
+          "min_ram_gb": 2,
           "obs_tg": 10.3
         },
         {
@@ -424,7 +378,7 @@
           "params": 999885952,
           "size_bytes": 806058240,
           "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-          "min_ram_gb": 2.0,
+          "min_ram_gb": 2,
           "obs_tg": 11.2
         }
       ]
@@ -497,7 +451,7 @@
           "params": 999885952,
           "size_bytes": 806058240,
           "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-          "min_ram_gb": 2.0,
+          "min_ram_gb": 2,
           "obs_tg": 14.1
         }
       ]
@@ -537,7 +491,7 @@
           "size_bytes": 3041376384,
           "sha256": "9c4c1d48a462f7f883b28984ac4f42d366c9c573434eab68553e0f38bf7eb50c",
           "min_ram_gb": 4.5,
-          "obs_tg": 9.0,
+          "obs_tg": 9,
           "multimodal": true
         },
         {
@@ -569,7 +523,7 @@
           "params": 999885952,
           "size_bytes": 806058240,
           "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-          "min_ram_gb": 2.0,
+          "min_ram_gb": 2,
           "obs_tg": 23.3
         }
       ]

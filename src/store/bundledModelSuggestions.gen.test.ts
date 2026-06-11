@@ -85,6 +85,49 @@ export const generateBundledSuggestions = (
 
 const ARTIFACT_PATH = path.join(__dirname, 'bundledModelSuggestions.ts');
 
+const RULES_DIR = path.join(__dirname, 'bundledDeviceRules');
+const RULES_FILES: Record<Platform, string> = {
+  android: path.join(RULES_DIR, 'rules.android.json'),
+  ios: path.join(RULES_DIR, 'rules.ios.json'),
+};
+
+// The advisory repo carries human-documentation fields the app never reads:
+// a top-level `notes` string and underscore-prefixed keys (`_status`,
+// `_quant_policy`, `_selection_policy`, …) at any nesting level. parse.ts
+// ignores extra fields, so we drop them from the bundled snapshot rather than
+// ship them. Strip is recursive so a future nested `_*` doc field can't sneak
+// in on the next snapshot regen.
+const stripHumanDocFields = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(stripHumanDocFields);
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
+      if (key === 'notes' || key.startsWith('_')) {
+        continue;
+      }
+      out[key] = stripHumanDocFields(child);
+    }
+    return out;
+  }
+  return value;
+};
+
+const serializeRules = async (
+  raw: unknown,
+  filePath: string,
+): Promise<string> => {
+  const sanitized = stripHumanDocFields(raw);
+  const config = await prettier.resolveConfig(filePath);
+  return prettier.format(JSON.stringify(sanitized, null, 2), {
+    ...config,
+    parser: 'json',
+  });
+};
+
 const serializeArtifact = async (
   snapshot: GeneratedSnapshot,
 ): Promise<string> => {
@@ -137,6 +180,26 @@ describe('bundled model suggestions generator', () => {
     expect(mid[0].sizeBytes).toBeGreaterThan(0);
     expect(mid[0].params).toBeGreaterThan(0);
     expect(mid[0].displayName).toBeTruthy();
+  });
+
+  it('keeps committed rules files free of human-doc fields, or rewrites them in write mode', async () => {
+    const sources: Record<Platform, unknown> = {
+      android: androidRulesRaw,
+      ios: iosRulesRaw,
+    };
+
+    for (const platform of ['android', 'ios'] as Platform[]) {
+      const filePath = RULES_FILES[platform];
+      const serialized = await serializeRules(sources[platform], filePath);
+
+      if (process.env.BUNDLED_GEN_WRITE === '1') {
+        fs.writeFileSync(filePath, serialized);
+        continue;
+      }
+
+      const committed = fs.readFileSync(filePath, 'utf8');
+      expect(serialized).toBe(committed);
+    }
   });
 
   it('matches the committed artifact (golden) or rewrites it in write mode', async () => {

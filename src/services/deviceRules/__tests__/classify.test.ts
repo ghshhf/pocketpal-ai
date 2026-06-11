@@ -69,7 +69,7 @@ const iosClassifier: Classifier = {
 const GiB = 1024 * 1024 * 1024;
 
 describe('classify', () => {
-  it('classifies a mid-tier Android device by socModel (scenario A)', () => {
+  it('classifies a mid-tier Android device by socModel', () => {
     const signals: DeviceSignals = {
       ramBytes: 8 * GiB,
       socModel: 'Tensor G3',
@@ -95,18 +95,18 @@ describe('classify', () => {
     expect(classify(signals, androidClassifier, 'android')).toBe('high');
   });
 
-  it('classifies an iOS device by machine -> chip -> class (scenario A)', () => {
+  it('classifies an iOS device by machine -> chip -> class', () => {
     const signals: DeviceSignals = {ramBytes: 6 * GiB, machine: 'iPhone14,2'};
     expect(classify(signals, iosClassifier, 'ios')).toBe('mid');
   });
 
-  it('falls back to device family for an unknown iPad (scenario E)', () => {
+  it('falls back to device family for an unknown iPad', () => {
     const signals: DeviceSignals = {ramBytes: 16 * GiB, machine: 'iPad99,9'};
     // unknown id -> family fallback: iPad + >=16 + >=8GiB ram -> flagship
     expect(classify(signals, iosClassifier, 'ios')).toBe('flagship');
   });
 
-  it('returns low for a device unknown to the classifier (scenario F, 9d totality)', () => {
+  it('returns low for a device unknown to the classifier', () => {
     const signals: DeviceSignals = {
       ramBytes: 2 * GiB,
       socModel: 'TOTALLY_UNKNOWN',
@@ -121,7 +121,7 @@ describe('classify', () => {
     expect(classify(signals, iosClassifier, 'ios')).toBe('low');
   });
 
-  it('ignores Android signals when classifying as iOS (9e platform mismatch)', () => {
+  it('ignores Android signals when classifying as iOS (platform mismatch)', () => {
     // Android-only fields present but platform=ios: socModel/hardware ignored,
     // no machine -> device family {} -> entry; ram lt-3 -> low
     const signals: DeviceSignals = {
@@ -132,7 +132,7 @@ describe('classify', () => {
     expect(classify(signals, iosClassifier, 'ios')).toBe('low');
   });
 
-  it('treats absent minRamGb / features as no-match in cpu heuristic (9k)', () => {
+  it('treats absent minRamGb / features as no-match in cpu heuristic', () => {
     const signals: DeviceSignals = {ramBytes: 8 * GiB};
     // no features, no freq -> only {} rule matches -> budget; 6-8 budget has no
     // matrix entry here -> floor low

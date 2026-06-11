@@ -589,7 +589,7 @@ class ModelStore {
   // {hfModel, modelFile} subset hfAsModel reads, so the result is origin:HF,
   // byte-identical to an HF-browser add. Vision entries also push their mmproj
   // sibling Models (mirrors addHFModel) so the projection is resolvable for
-  // download. Deduped by {repo,filename}, first wins.
+  // download. Deduped by model.id (author/repo/filename), first wins.
   resolvePresetModels = (
     rules: DeviceRules,
     signals: DeviceSignals,
@@ -710,8 +710,8 @@ class ModelStore {
     // The default list is data-driven: rule-resolved origin:HF presets replace
     // the old static PRESET array. Keep every downloaded model regardless of
     // origin, drop non-downloaded PRESET stubs, then reconcile the resolved
-    // presets in by {repo,filename} (origin-spanning) so a kept legacy PRESET
-    // download suppresses its rule stub.
+    // presets in by model.id (author/repo/filename, origin-spanning) so a kept
+    // legacy PRESET download suppresses its rule stub.
     const mergedModels = [...this.models].filter(
       model => model.origin !== ModelOrigin.PRESET || model.isDownloaded,
     );

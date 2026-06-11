@@ -17,6 +17,9 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore, serverStore} from '..';
 import {classify} from '../../services/deviceRules/classify';
+import {parseDeviceRules} from '../../services/deviceRules/parse';
+import androidBundledRules from '../bundledDeviceRules/rules.android.json';
+import iosBundledRules from '../bundledDeviceRules/rules.ios.json';
 import {t} from '../../locales';
 import {
   getCpuCoreCount,
@@ -284,6 +287,81 @@ describe('ModelStore', () => {
       expect(presets).toHaveLength(1);
     });
 
+    it('materializes the projection sibling Model so it is resolvable by id', () => {
+      // I8: the vision LLM pairs the projection id; the expansion must put the
+      // projection Model in the store so _downloadProjectionModelIfNeeded finds
+      // it. When the sibling carries no url (the bundled-JSON shape), the
+      // projection downloadUrl is empty — assert it IS materialized (present by
+      // id), matching addHFModel's behavior for the same input.
+      const visionEntry = {
+        hfModel: {
+          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+          author: 'ggml-org',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
+          siblings: [
+            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
+            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+          ],
+        },
+        modelFile: {
+          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
+        },
+      };
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionEntry]) as any,
+        signals as any,
+      );
+      const proj = presets.find(m =>
+        m.id.endsWith('/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf'),
+      );
+      expect(proj).toBeDefined();
+      // No url on the sibling → empty downloadUrl (current, documented behavior).
+      expect(proj?.downloadUrl).toBe('');
+    });
+
+    it('does not double-push an mmproj that is also a top-level tier entry', () => {
+      // A vision LLM expands to [llm, mmproj]; if the SAME mmproj is also listed
+      // as its own top-level tier entry, the {repo,filename} dedup must collapse
+      // it to a single Model (no duplicate card, no double download).
+      const visionEntry = {
+        hfModel: {
+          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+          author: 'ggml-org',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
+          siblings: [
+            {rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf', size: 500},
+            {rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf', size: 100},
+          ],
+        },
+        modelFile: {
+          rfilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf',
+        },
+      };
+      // The mmproj also listed directly as a separate tier entry.
+      const mmprojEntry = {
+        hfModel: {
+          id: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+          author: 'ggml-org',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF',
+        },
+        modelFile: {
+          rfilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+          url: 'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+        },
+      };
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionEntry, mmprojEntry]) as any,
+        signals as any,
+      );
+      const mmprojId =
+        'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf';
+      expect(presets.filter(m => m.id === mmprojId)).toHaveLength(1);
+      // LLM + single mmproj only.
+      expect(presets).toHaveLength(2);
+    });
+
     it('classifies the bundled floor (non-low) when offline', () => {
       // The bundled path must run rules through classify, not force the low
       // floor. A mid-tier device + a mid-only tier matrix resolves mid.
@@ -293,6 +371,86 @@ describe('ModelStore', () => {
         'android',
       );
       expect(tier).toBe('mid');
+    });
+  });
+
+  describe('bundled offline floor (committed rules.<platform>.json)', () => {
+    let savedOS: typeof Platform.OS;
+    afterEach(() => {
+      Platform.OS = savedOS;
+    });
+    beforeEach(() => {
+      savedOS = Platform.OS;
+    });
+
+    // Projection (mmproj) Models are materialized from hfModel.siblings[], which
+    // in the bundled JSON carry no `url` — so their downloadUrl is empty. The
+    // top-level LLM entries are the ones the user taps; those carry the baked
+    // /resolve/main/ url. Assert downloadUrl only on the LLM (non-projection)
+    // entries; the projection-url behavior is asserted separately below.
+    const isProjection = (id: string) => /\/mmproj/i.test(id);
+
+    it('android: parses + classifies non-low and resolves origin:HF presets', () => {
+      Platform.OS = 'android';
+      const rules = parseDeviceRules(androidBundledRules);
+      const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
+      const tier = classify(signals as any, rules.classifier, 'android');
+      expect(tier).not.toBe('low');
+      expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      expect(presets.length).toBeGreaterThan(0);
+      for (const m of presets) {
+        expect(m.origin).toBe(ModelOrigin.HF);
+      }
+      for (const m of presets.filter(p => !isProjection(p.id))) {
+        expect(m.downloadUrl).toContain('/resolve/main/');
+      }
+    });
+
+    it('ios: parses + classifies non-low and resolves origin:HF presets', () => {
+      Platform.OS = 'ios';
+      const rules = parseDeviceRules(iosBundledRules);
+      const signals = {ramBytes: 8 * 1e9, machine: 'iPhone16,1'};
+      const tier = classify(signals as any, rules.classifier, 'ios');
+      expect(tier).not.toBe('low');
+      expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      expect(presets.length).toBeGreaterThan(0);
+      for (const m of presets) {
+        expect(m.origin).toBe(ModelOrigin.HF);
+      }
+      for (const m of presets.filter(p => !isProjection(p.id))) {
+        expect(m.downloadUrl).toContain('/resolve/main/');
+      }
+    });
+
+    it('android: every resolved LLM carries baked oid/lfs from the file', () => {
+      Platform.OS = 'android';
+      const rules = parseDeviceRules(androidBundledRules);
+      const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      const llms = presets.filter(m => !isProjection(m.id));
+      expect(llms.length).toBeGreaterThan(0);
+      for (const m of llms) {
+        expect(m.hfModelFile?.oid).toBeTruthy();
+        expect(m.hfModelFile?.lfs?.oid).toBeTruthy();
+      }
+    });
+
+    it('all four tiers parse to a non-empty, origin:HF model set on android', () => {
+      const rules = parseDeviceRules(androidBundledRules);
+      for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
+        expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('all four tiers parse to a non-empty, origin:HF model set on ios', () => {
+      const rules = parseDeviceRules(iosBundledRules);
+      for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
+        expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+      }
     });
   });
 

@@ -298,6 +298,7 @@
           "model": "huggingfacetb_smollm3-3b",
           "hf_repo": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
           "hf_filename": "HuggingFaceTB_SmolLM3-3B-Q4_K_M.gguf",
+          "params": 3075098624,
           "size_bytes": 1915305792
         },
         {

@@ -22,6 +22,30 @@ const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
+// Rule URLs are baked by an out-of-tree process and fetched from a third-party
+// CDN, so they are an untrusted input. Pin the download target to huggingface.co
+// (the only host the app's HF token is ever sent to) and reject any other URL.
+const isHuggingFaceUrl = (url: unknown): url is string => {
+  if (typeof url !== 'string') {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.host === 'huggingface.co';
+  } catch {
+    return false;
+  }
+};
+
+// A wire-supplied filename flows into the local model path, so reject anything
+// that is not a plain filename (no path separators, no parent-dir traversal).
+const isSafePathSegment = (v: unknown): v is string =>
+  typeof v === 'string' &&
+  v.length > 0 &&
+  !v.includes('/') &&
+  !v.includes('\\') &&
+  !v.includes('..');
+
 const asString = (v: unknown): string | undefined =>
   typeof v === 'string' ? v : undefined;
 
@@ -168,8 +192,8 @@ const parseLfs = (v: unknown): ModelFile['lfs'] | undefined => {
 const parseModelFile = (v: unknown): ModelFile | null => {
   if (
     !isObject(v) ||
-    typeof v.rfilename !== 'string' ||
-    typeof v.url !== 'string'
+    !isSafePathSegment(v.rfilename) ||
+    !isHuggingFaceUrl(v.url)
   ) {
     return null;
   }
@@ -183,12 +207,18 @@ const parseModelFile = (v: unknown): ModelFile | null => {
 };
 
 const parseSibling = (v: unknown): ModelFile | null => {
-  if (!isObject(v) || typeof v.rfilename !== 'string') {
+  // A sibling carries the mmproj download target, so it is held to the same
+  // host-pin and path-safety guard as the main model file.
+  if (
+    !isObject(v) ||
+    !isSafePathSegment(v.rfilename) ||
+    !isHuggingFaceUrl(v.url)
+  ) {
     return null;
   }
   return {
     rfilename: v.rfilename,
-    url: asString(v.url),
+    url: v.url,
     size: asNumber(v.size),
     oid: asString(v.oid),
     lfs: parseLfs(v.lfs),
@@ -200,8 +230,14 @@ const parseHFModel = (v: unknown): RuleHFModel | null => {
     !isObject(v) ||
     typeof v.id !== 'string' ||
     typeof v.author !== 'string' ||
-    typeof v.url !== 'string'
+    !isHuggingFaceUrl(v.url)
   ) {
+    return null;
+  }
+  // author and the repo derived from id both become local path segments, so
+  // reject any value that could escape the models directory.
+  const repo = v.id.split('/')[1];
+  if (!isSafePathSegment(v.author) || !isSafePathSegment(repo)) {
     return null;
   }
   const specsRaw = isObject(v.specs) && isObject(v.specs.gguf) ? v.specs : null;

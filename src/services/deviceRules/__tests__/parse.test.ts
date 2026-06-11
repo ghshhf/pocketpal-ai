@@ -150,6 +150,62 @@ describe('parseDeviceRules', () => {
     expect(rules.tiers.mid.models).toHaveLength(1);
   });
 
+  it('drops an entry whose modelFile url is not on huggingface.co', () => {
+    const offHost = JSON.parse(JSON.stringify(validRaw));
+    offHost.tiers.mid.models[0].modelFile.url =
+      'https://evil.example.com/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
+    const rules = parseDeviceRules(offHost);
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('drops an entry whose modelFile url is http (not https) on huggingface.co', () => {
+    const insecure = JSON.parse(JSON.stringify(validRaw));
+    insecure.tiers.mid.models[0].modelFile.url =
+      'http://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
+    const rules = parseDeviceRules(insecure);
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('omits a sibling whose url is not on huggingface.co (keeps the entry)', () => {
+    const offHostSibling = JSON.parse(JSON.stringify(validRaw));
+    offHostSibling.tiers.mid.models[0].hfModel.siblings = [
+      {
+        rfilename: 'mmproj-good-f16.gguf',
+        url: 'https://huggingface.co/org/repo/resolve/main/mmproj-good-f16.gguf',
+      },
+      {
+        rfilename: 'mmproj-evil-f16.gguf',
+        url: 'https://evil.example.com/org/repo/resolve/main/mmproj-evil-f16.gguf',
+      },
+    ];
+    const rules = parseDeviceRules(offHostSibling);
+    const siblings = rules.tiers.mid.models[0].hfModel.siblings;
+    expect(siblings).toHaveLength(1);
+    expect(siblings?.[0].rfilename).toBe('mmproj-good-f16.gguf');
+  });
+
+  it('rejects an entry whose rfilename contains a path traversal', () => {
+    const traversal = JSON.parse(JSON.stringify(validRaw));
+    traversal.tiers.mid.models[0].modelFile.rfilename =
+      '../../etc/passwd.gguf';
+    const rules = parseDeviceRules(traversal);
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('rejects an entry whose rfilename contains a path separator', () => {
+    const sep = JSON.parse(JSON.stringify(validRaw));
+    sep.tiers.mid.models[0].modelFile.rfilename = 'sub/dir/model.gguf';
+    const rules = parseDeviceRules(sep);
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('rejects an entry whose author contains a path traversal', () => {
+    const badAuthor = JSON.parse(JSON.stringify(validRaw));
+    badAuthor.tiers.mid.models[0].hfModel.author = '../../evil';
+    const rules = parseDeviceRules(badAuthor);
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
   it('yields empty tiers for an old candidates[] schema doc', () => {
     const old = JSON.parse(JSON.stringify(validRaw));
     old.tiers = {

@@ -20,6 +20,21 @@ import type {
 
 const TAG = 'DownloadManager';
 
+// The HF auth token must never leave huggingface.co. Download URLs are pinned to
+// HF at parse time, but this is a defense-in-depth gate so a token can never be
+// attached for any other host even if a non-HF URL ever reaches here.
+const isHuggingFaceUrl = (url: string | undefined): boolean => {
+  if (!url) {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.host === 'huggingface.co';
+  } catch {
+    return false;
+  }
+};
+
 export class DownloadManager {
   private downloadJobs: DownloadMap;
   private callbacks: DownloadEventCallbacks = {};
@@ -219,6 +234,11 @@ export class DownloadManager {
       return;
     }
 
+    // Only send the HF auth token to huggingface.co.
+    const effectiveAuthToken = isHuggingFaceUrl(model.downloadUrl)
+      ? authToken
+      : null;
+
     if (!model.downloadUrl) {
       console.error(`${TAG}: Model has no download URL`);
       throw new Error('Model has no download URL');
@@ -246,9 +266,13 @@ export class DownloadManager {
     }
 
     if (Platform.OS === 'ios') {
-      await this.startIOSDownload(model, destinationPath, authToken);
+      await this.startIOSDownload(model, destinationPath, effectiveAuthToken);
     } else {
-      await this.startAndroidDownload(model, destinationPath, authToken);
+      await this.startAndroidDownload(
+        model,
+        destinationPath,
+        effectiveAuthToken,
+      );
     }
   }
 

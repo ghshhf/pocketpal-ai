@@ -286,6 +286,44 @@ describe('parseDeviceRules', () => {
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
+  it('drops a multimodal candidate whose mmproj is in a different repo', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+        mmproj: {
+          hf_repo: 'a/other-repo',
+          hf_filename: 'mmproj-BF16.gguf',
+          size_bytes: 100,
+        },
+      }),
+    );
+    // Cross-repo projectors are not supported: id (LLM repo) and downloadUrl
+    // (mmproj repo) would split silently, so the whole candidate is dropped.
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('drops a multimodal candidate whose mmproj filename is not a projector', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'x.gguf',
+        multimodal: true,
+        mmproj: {
+          hf_repo: 'a/b',
+          hf_filename: 'model-Q4_0.gguf',
+          size_bytes: 100,
+        },
+      }),
+    );
+    // A non-mmproj projector filename would degrade the model to a plain LLM
+    // with no projector, so the candidate is dropped.
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
   it('drops a multimodal candidate whose mmproj size_bytes is missing', () => {
     const rules = parseDeviceRules(
       withCandidate({

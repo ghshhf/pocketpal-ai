@@ -583,6 +583,119 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('resetModels repopulates the default list', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+    afterEach(async () => {
+      // resetModels fires an un-awaited loadMissingGGUFMetadata; let it settle
+      // before clearing so it cannot bleed into the next test.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      Platform.OS = savedOS;
+      runInAction(() => {
+        modelStore.models = [];
+      });
+    });
+
+    it('re-resolves device presets while keeping local and HF models', async () => {
+      const localModel = createModel({
+        id: 'local/my-model.gguf',
+        author: 'local',
+        repo: 'local',
+        filename: 'my-model.gguf',
+        fullPath: '/tmp/my-model.gguf',
+        origin: ModelOrigin.LOCAL,
+        isLocal: true,
+        isDownloaded: true,
+      }) as Model;
+      const hfModel = createModel({
+        id: 'hf/repo/hf.gguf',
+        author: 'hf',
+        repo: 'repo',
+        filename: 'hf.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+      }) as Model;
+      modelStore.models = [localModel, hfModel];
+
+      await modelStore.resetModels();
+
+      // Local and HF models survive the reset.
+      expect(modelStore.models.some(m => m.id === 'local/my-model.gguf')).toBe(
+        true,
+      );
+      expect(modelStore.models.some(m => m.id === 'hf/repo/hf.gguf')).toBe(
+        true,
+      );
+
+      // The device-appropriate rule presets are repopulated in-session.
+      const presets = modelStore.models.filter(m => m.isRulePreset === true);
+      expect(presets.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('migration with empty preset resolve', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.version = undefined;
+        modelStore.availableMemoryCeiling = 1;
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+    afterEach(async () => {
+      // initializeStore fires several un-awaited background tasks; let them
+      // settle before clearing state so they cannot bleed into the next test.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      Platform.OS = savedOS;
+      runInAction(() => {
+        modelStore.models = [];
+      });
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 8 * 1e9,
+        socModel: 'SM8850',
+      });
+    });
+
+    it('does not finalize the migration when presets resolve empty', async () => {
+      // A transient signal-read failure makes resolvePresets return [].
+      (readDeviceSignals as jest.Mock).mockRejectedValue(
+        new Error('signals exploded'),
+      );
+
+      await modelStore.initializeStore();
+
+      // An empty resolve must not lock in an empty default list: leave the
+      // version unbumped so the migration retries on the next launch.
+      expect(modelStore.version).toBeUndefined();
+    });
+
+    it('finalizes the migration once presets resolve non-empty', async () => {
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+
+      await modelStore.initializeStore();
+
+      // The bundled floor resolved a non-empty preset list, so the one-time
+      // migration finalizes.
+      expect(modelStore.version).toBe(MODEL_LIST_VERSION);
+      expect(modelStore.models.some(m => m.isRulePreset === true)).toBe(true);
+    });
+  });
+
   describe('reconcilePresets pruning (steady-state drift)', () => {
     let savedOS: typeof Platform.OS;
     beforeAll(() => {
@@ -1780,13 +1893,13 @@ describe('ModelStore', () => {
       modelStore.models = [localModel, hfModel] as any;
     });
 
-    it('should reset models while preserving local and HF models', () => {
+    it('should reset models while preserving local and HF models', async () => {
       // Spy on mergeModelLists
       const mockMergeModelLists = jest.fn();
       const originalMergeModelLists = modelStore.mergeModelLists;
       modelStore.mergeModelLists = mockMergeModelLists;
 
-      modelStore.resetModels();
+      await modelStore.resetModels();
 
       // Check that models were cleared and restored
       expect(mockMergeModelLists).toHaveBeenCalled();

@@ -47,6 +47,21 @@ describe('readDeviceSignals', () => {
     });
   });
 
+  it('degrades to a ram floor when the total-memory read throws', async () => {
+    Object.defineProperty(Platform, 'OS', {value: 'ios'});
+    (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
+      new Error('mem boom'),
+    );
+    (DeviceInfo.getDeviceId as jest.Mock).mockResolvedValue('iPhone14,2');
+
+    const signals = await readDeviceSignals();
+
+    // A failing RAM read maps to a small non-zero floor (lowest band) rather
+    // than rejecting, so presets never resolve to empty.
+    expect(signals.ramBytes).toBeGreaterThan(0);
+    expect(signals.ramBytes).toBeLessThan(3 * 1024 * 1024 * 1024);
+  });
+
   it('degrades to ram-only when the native cpu read throws (Android)', async () => {
     Object.defineProperty(Platform, 'OS', {value: 'android'});
     (NativeHardwareInfo.getCPUInfo as jest.Mock).mockRejectedValue(

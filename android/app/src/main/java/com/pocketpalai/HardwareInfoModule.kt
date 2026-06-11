@@ -255,22 +255,23 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
   }
 
   // Big-core max frequency in MHz, read across all cores' cpufreq nodes.
-  // Returns null when no core exposes a readable cpuinfo_max_freq.
+  // Some cores can be offline (missing cpufreq node) without being the last
+  // core, so we scan a bounded range and skip gaps rather than stop on the
+  // first absent node. Returns null when no core exposes a readable value.
   private fun readMaxCpuFreqMhz(): Int? {
     return try {
       var maxKhz = 0L
-      var core = 0
-      while (true) {
+      val coreCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 16)
+      for (core in 0 until coreCount) {
         val node = File("/sys/devices/system/cpu/cpu$core/cpufreq/cpuinfo_max_freq")
         if (!node.exists()) {
-          break
+          continue
         }
         node.readText().trim().toLongOrNull()?.let {
           if (it > maxKhz) {
             maxKhz = it
           }
         }
-        core++
       }
       if (maxKhz > 0L) (maxKhz / 1000).toInt() else null
     } catch (e: Throwable) {

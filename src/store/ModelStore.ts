@@ -35,9 +35,12 @@ import {
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
-import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager} from '../services/downloads';
+
+// Bump when the migration logic that re-merges the persisted model list
+// changes. Crossing this version runs the one-time prune-and-reconcile.
+export const MODEL_LIST_VERSION = 15;
 
 import {
   getHFDefaultSettings,
@@ -562,61 +565,15 @@ class ModelStore {
   };
 
   mergeModelLists = () => {
-    // Start with persisted models, but filter out non-downloaded preset models
+    // The default list is now data-driven (device rules + bundled snapshot),
+    // surfaced as suggestions rather than baked PRESET entries. Migration keeps
+    // every downloaded model regardless of origin and drops non-downloaded
+    // PRESET stubs (they re-appear only if still suggested). Kept downloads are
+    // reconciled to suggestions by {repo,filename} at render time, so no id
+    // rewrite is needed here.
     const mergedModels = [...this.models].filter(
       model => model.origin !== ModelOrigin.PRESET || model.isDownloaded,
     );
-
-    // Handle PRESET models using defaultModels as reference
-    defaultModels.forEach(defaultModel => {
-      const existingModelIndex = mergedModels.findIndex(
-        m => m.id === defaultModel.id,
-      );
-
-      if (existingModelIndex !== -1) {
-        // Merge existing model with new defaults
-        const existingModel = mergedModels[existingModelIndex];
-
-        // For PRESET models, directly use defaultModel's default settings
-        existingModel.defaultChatTemplate = defaultModel.defaultChatTemplate;
-        existingModel.defaultStopWords = defaultModel.defaultStopWords;
-        // Deep merge chatTemplate and stopWords
-        existingModel.chatTemplate = deepMerge(
-          existingModel.chatTemplate || {},
-          defaultModel.chatTemplate || {},
-        );
-
-        existingModel.stopWords = [
-          ...(existingModel.stopWords || []),
-          ...(defaultModel.stopWords || []),
-        ];
-
-        // **Merge other attributes from defaultModel**
-
-        const {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          id,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          defaultChatTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          defaultStopWords,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          chatTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          stopWords,
-          ...attributesToMerge
-        } = defaultModel;
-
-        // Merge remaining attributes
-        Object.assign(existingModel, attributesToMerge);
-
-        // Merge other properties
-        mergedModels[existingModelIndex] = existingModel;
-      } else {
-        // Add new model if it doesn't exist
-        mergedModels.push(defaultModel);
-      }
-    });
 
     // Handle HF and LOCAL models
     mergedModels.forEach(model => {

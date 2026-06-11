@@ -3,13 +3,13 @@ import {runInAction} from 'mobx';
 import {LlamaContext} from 'llama.rn';
 import {Alert} from 'react-native';
 
-import {defaultModels} from '../defaultModels';
-
 import {downloadManager} from '../../services/downloads';
 
-import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
+import {GGUFMetadata, Model, ModelOrigin, ModelType} from '../../utils/types';
+import {getDisplayNameFromFilename} from '../../utils/formatters';
 import {
   basicModel,
+  createModel,
   mockLlamaContextParams,
   mockHFModel1,
 } from '../../../jest/fixtures/models';
@@ -57,6 +57,17 @@ jest.mock('../../services/downloads', () => ({
 
 // RNFS is mocked globally in jest/setup.ts
 
+// Generic PRESET-origin model fixture used across the suite.
+const presetModelFixture: Model = createModel({
+  id: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+  author: 'bartowski',
+  repo: 'gemma-2-2b-it-GGUF',
+  name: 'Gemma-2-2b-it (Q6_K)',
+  filename: 'gemma-2-2b-it-Q6_K.gguf',
+  origin: ModelOrigin.PRESET,
+  params: 2614341888,
+}) as Model;
+
 describe('ModelStore', () => {
   let showErrorSpy: jest.SpyInstance;
 
@@ -83,82 +94,76 @@ describe('ModelStore', () => {
   });
 
   describe('mergeModelLists', () => {
-    it('should add missing default models to the existing model list', () => {
-      modelStore.models = []; // Start with no existing models
+    it('drops non-downloaded PRESET stubs', () => {
+      modelStore.models = [{...presetModelFixture, isDownloaded: false}];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
-      expect(modelStore.models.length).toBeGreaterThan(0);
-      expect(modelStore.models).toEqual(expect.arrayContaining(defaultModels));
+      expect(modelStore.models).toHaveLength(0);
     });
 
-    it('should merge existing models with default models, adding any that are missing', () => {
-      const notExistedModel = defaultModels[0];
-      modelStore.models = defaultModels.slice(1); // Start with all but the first model, so we can test if it's added back
-      expect(modelStore.models.length).toBe(defaultModels.length - 1);
-      expect(modelStore.models).not.toContainEqual(notExistedModel);
+    it('keeps a downloaded legacy PRESET model regardless of origin (scenario D)', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
-      expect(modelStore.models.length).toBeGreaterThan(0);
-      expect(modelStore.models).toContainEqual(notExistedModel);
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].id).toBe(downloadedPreset.id);
+      expect(modelStore.models[0].isDownloaded).toBe(true);
     });
 
-    it('should retain value of existing variables while merging new variables', () => {
-      const newDefaultModel = defaultModels[0];
+    it('keeps downloaded models, drops non-downloaded PRESET stubs in one pass', () => {
+      const downloadedPreset = {
+        ...presetModelFixture,
+        id: 'kept/repo/kept.gguf',
+        isDownloaded: true,
+      };
+      const stub = {
+        ...presetModelFixture,
+        id: 'stub/repo/stub.gguf',
+        isDownloaded: false,
+      };
+      modelStore.models = [downloadedPreset, stub];
 
-      // Apply changes to the existing model:
-      //  - chatTemplate.template: existing variable with a value different from the default
-      //  - stopWords: existing array with custom values
-      const existingModel = {
-        ...newDefaultModel,
+      runInAction(() => {
+        modelStore.mergeModelLists();
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('kept/repo/kept.gguf');
+      expect(ids).not.toContain('stub/repo/stub.gguf');
+    });
+
+    it('preserves HF model customizations while refreshing defaults', () => {
+      const hfModel = {
+        ...presetModelFixture,
+        id: 'hf/repo/hf.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
         chatTemplate: {
-          ...newDefaultModel.chatTemplate,
+          ...presetModelFixture.chatTemplate,
           template: 'existing',
         },
         stopWords: ['custom_stop_1', 'custom_stop_2'],
-        isDownloaded: true, // if not downloaded, it will be removed
+        hfModel: mockHFModel1,
       };
-
-      modelStore.models[0] = existingModel;
+      modelStore.models = [hfModel];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
       expect(modelStore.models[0].chatTemplate).toEqual(
-        expect.objectContaining({
-          template: 'existing', // Existing value should remain
-        }),
+        expect.objectContaining({template: 'existing'}),
       );
-
-      // Custom stop words should be preserved
-      expect(modelStore.models[0].stopWords).toEqual([
-        'custom_stop_1',
-        'custom_stop_2',
-        ...(newDefaultModel.stopWords || []),
-      ]);
-    });
-
-    it('should merge value of default to exisiting for top level variables', () => {
-      const newDefaultModel = defaultModels[0];
-
-      const existingModel = {
-        ...newDefaultModel,
-        params: 101010,
-      };
-
-      modelStore.models[0] = existingModel;
-
-      runInAction(() => {
-        modelStore.mergeModelLists();
-      });
-
-      expect(modelStore.models[0].params).toEqual(newDefaultModel.params);
+      expect(modelStore.models[0].stopWords).toEqual(
+        expect.arrayContaining(['custom_stop_1', 'custom_stop_2']),
+      );
     });
   });
 
@@ -179,7 +184,7 @@ describe('ModelStore', () => {
     });
 
     it('should delete model and release context if active', async () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -242,10 +247,9 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].name).toBe('my-model-file');
     });
 
-    it('should reset preset model name to original display name', () => {
-      // Use a real preset model from defaultModels
+    it('should reset preset model name to the filename-derived name', () => {
       const presetModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         name: 'User Modified Name', // User changed it
       };
       runInAction(() => {
@@ -254,11 +258,13 @@ describe('ModelStore', () => {
 
       modelStore.resetModelName(presetModel.id);
 
-      // Should restore to original name from defaultModels
-      expect(modelStore.models[0].name).toBe(defaultModels[0].name);
+      // Display-name reset is now filename-derived for every origin.
+      expect(modelStore.models[0].name).toBe(
+        getDisplayNameFromFilename(presetModelFixture.filename),
+      );
     });
 
-    it('should handle reset when preset model not found in defaultModels', () => {
+    it('should reset any preset model name from its filename', () => {
       const orphanPresetModel = {
         ...basicModel,
         id: 'orphan-preset-id',
@@ -299,7 +305,7 @@ describe('ModelStore', () => {
 
     it('should allow deletion of unused projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -313,7 +319,7 @@ describe('ModelStore', () => {
 
     it('should prevent deletion of active projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -330,14 +336,14 @@ describe('ModelStore', () => {
 
     it('should allow deletion of projection model used by downloaded LLM with warning', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -354,14 +360,14 @@ describe('ModelStore', () => {
 
     it('should allow deletion of projection model used only by non-downloaded LLM', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -376,14 +382,14 @@ describe('ModelStore', () => {
 
     it('should get LLMs using projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -391,7 +397,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -399,7 +405,7 @@ describe('ModelStore', () => {
       };
 
       const unrelatedModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-unrelated-model',
         supportsMultimodal: true,
         defaultProjectionModel: 'other-proj-model',
@@ -425,14 +431,14 @@ describe('ModelStore', () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
 
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -458,14 +464,14 @@ describe('ModelStore', () => {
 
     it('should not cleanup projection model if multiple LLMs use it', async () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -473,7 +479,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -494,21 +500,21 @@ describe('ModelStore', () => {
 
     it('should cleanup multiple orphaned projection models when LLM is deleted', async () => {
       const projModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-1',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const projModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-2',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel1.id,
@@ -542,7 +548,7 @@ describe('ModelStore', () => {
 
     it('should only cleanup orphaned projection models, not ones used by other LLMs', async () => {
       const projModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-1',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -552,7 +558,7 @@ describe('ModelStore', () => {
       };
 
       const projModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-2',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -562,7 +568,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel1.id,
@@ -574,7 +580,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel2.id, // Uses projModel2
@@ -604,7 +610,7 @@ describe('ModelStore', () => {
 
     it('should set isDownloaded to false after deletion to enable orphaned cleanup', async () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -614,7 +620,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -697,7 +703,7 @@ describe('ModelStore', () => {
     it('should reinitialize context when coming back to foreground', async () => {
       // Setup
       modelStore.useAutoRelease = true;
-      const model = {...defaultModels[0], isDownloaded: true}; // Ensure model is downloaded
+      const model = {...presetModelFixture, isDownloaded: true}; // Ensure model is downloaded
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -767,7 +773,7 @@ describe('ModelStore', () => {
 
     it('initContext throws when benchmark mode is active', async () => {
       modelStore.benchmarkActive = true;
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       await expect(modelStore.initContext(model)).rejects.toThrow(
         /benchmark mode is active/i,
       );
@@ -775,7 +781,7 @@ describe('ModelStore', () => {
 
     it('initContext succeeds again after exitBenchmarkMode', async () => {
       modelStore.benchmarkActive = true;
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       modelStore.exitBenchmarkMode();
       // After exit, the synchronous gate is gone — initContext proceeds
       // to its normal pre-flight (memory check, etc.). The model isn't
@@ -791,7 +797,7 @@ describe('ModelStore', () => {
 
   describe('settings management', () => {
     it('should update stop words', () => {
-      const model = {...defaultModels[0]};
+      const model = {...presetModelFixture};
       modelStore.models = [model];
 
       const newStopWords = ['stop1', 'stop2'];
@@ -802,7 +808,7 @@ describe('ModelStore', () => {
     });
 
     it('should reset model stop words to defaults', () => {
-      const model = {...defaultModels[0]};
+      const model = {...presetModelFixture};
       const originalStopWords = [...(model.defaultStopWords || [])];
       model.stopWords = ['custom1', 'custom2'];
       modelStore.models = [model];
@@ -815,7 +821,7 @@ describe('ModelStore', () => {
 
   describe('download management', () => {
     it('should handle download cancellation', async () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
 
       // Mock isDownloading to return true initially
@@ -829,7 +835,7 @@ describe('ModelStore', () => {
     });
 
     it('should update model state on download error', () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
 
       // Set up callbacks directly
@@ -854,7 +860,7 @@ describe('ModelStore', () => {
 
     it('should handle download failure due to insufficient space', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         downloadUrl: 'https://example.com/model.gguf', // Ensure model has download URL
         isLocal: false,
         origin: ModelOrigin.PRESET,
@@ -877,7 +883,7 @@ describe('ModelStore', () => {
 
   describe('computed properties', () => {
     it('should return correct active model', () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -885,7 +891,7 @@ describe('ModelStore', () => {
     });
 
     it('should return correct last used model', () => {
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       modelStore.models = [model];
       modelStore.lastUsedModelId = model.id;
 
@@ -2011,7 +2017,7 @@ describe('ModelStore', () => {
 
     it('should retry download when error has modelId', () => {
       const testModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-model-0-1-0',
         isDownloaded: false,
       };
@@ -2620,7 +2626,7 @@ describe('ModelStore', () => {
 
     it('should auto-download projection model for vision models', async () => {
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model-0',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2634,7 +2640,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model-0',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2654,7 +2660,7 @@ describe('ModelStore', () => {
 
     it('should not auto-download projection model for vision models that are not enabled for vision', async () => {
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model-0',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2668,7 +2674,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model-0',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2700,7 +2706,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2713,7 +2719,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2749,7 +2755,7 @@ describe('ModelStore', () => {
       });
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         supportsMultimodal: true,
@@ -2788,7 +2794,7 @@ describe('ModelStore', () => {
       });
 
       const regularModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'regular-model',
         filename: 'regular.gguf',
         supportsMultimodal: false,
@@ -2826,7 +2832,7 @@ describe('ModelStore', () => {
       });
 
       const hfVisionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'hf-vision-model',
         filename: 'hf-vision.gguf',
         supportsMultimodal: true,
@@ -2840,7 +2846,7 @@ describe('ModelStore', () => {
       };
 
       const hfProjectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'hf-projection-model',
         filename: 'hf-projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2885,7 +2891,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2899,7 +2905,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2959,7 +2965,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2972,7 +2978,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -3172,7 +3178,7 @@ describe('ModelStore', () => {
 
     it('should not crash when loadLlamaModelInfo rejects', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };
@@ -3191,7 +3197,7 @@ describe('ModelStore', () => {
 
     it('should handle null response gracefully', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };
@@ -3207,7 +3213,7 @@ describe('ModelStore', () => {
 
     it('should populate ggufMetadata on success', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };

@@ -16,6 +16,7 @@ import {
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore, serverStore} from '..';
+import {classify} from '../../services/deviceRules/classify';
 import {t} from '../../locales';
 import {
   getCpuCoreCount,
@@ -281,6 +282,98 @@ describe('ModelStore', () => {
         signals as any,
       );
       expect(presets).toHaveLength(1);
+    });
+
+    it('classifies the bundled floor (non-low) when offline', () => {
+      // The bundled path must run rules through classify, not force the low
+      // floor. A mid-tier device + a mid-only tier matrix resolves mid.
+      const tier = classify(
+        signals as any,
+        makeRules([llmEntry]).classifier as any,
+        'android',
+      );
+      expect(tier).toBe('mid');
+    });
+  });
+
+  describe('preset migration / reconcile', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    // A rule preset (origin HF) sharing the legacy PRESET's {repo,filename}.
+    const rulePresetForGemma: Model = createModel({
+      id: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      author: 'bartowski',
+      repo: 'gemma-2-2b-it-GGUF',
+      name: 'Gemma-2-2b-it (Q6_K)',
+      filename: 'gemma-2-2b-it-Q6_K.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+
+    it('keeps a downloaded legacy PRESET and suppresses the same-{repo,filename} rule stub', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
+
+      runInAction(() => {
+        modelStore.mergeModelLists([rulePresetForGemma]);
+      });
+
+      const matching = modelStore.models.filter(
+        m => `${m.repo}/${m.filename}` === 'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].origin).toBe(ModelOrigin.PRESET);
+      expect(matching[0].isDownloaded).toBe(true);
+    });
+
+    it('suppresses a rule stub already downloaded from the HF browser', () => {
+      const downloadedHF = {
+        ...rulePresetForGemma,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+      };
+      modelStore.models = [downloadedHF];
+
+      runInAction(() => {
+        modelStore.mergeModelLists([rulePresetForGemma]);
+      });
+
+      const matching = modelStore.models.filter(
+        m => `${m.repo}/${m.filename}` === 'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].isDownloaded).toBe(true);
+    });
+
+    it('adds a not-downloaded rule preset as origin HF', () => {
+      modelStore.models = [];
+
+      runInAction(() => {
+        modelStore.mergeModelLists([rulePresetForGemma]);
+      });
+
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].origin).toBe(ModelOrigin.HF);
+      expect(modelStore.models[0].filename).toBe('gemma-2-2b-it-Q6_K.gguf');
+    });
+
+    it('reconcilePresets is a no-op when the preset already exists at any origin', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([rulePresetForGemma]);
+      });
+
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].origin).toBe(ModelOrigin.PRESET);
     });
   });
 

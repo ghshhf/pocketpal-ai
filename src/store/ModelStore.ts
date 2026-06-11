@@ -38,10 +38,13 @@ import {getOriginalModelName} from '../utils/formatters';
 
 import {downloadManager} from '../services/downloads';
 import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
-import {
-  DeviceRules,
-  DeviceSignals,
-} from '../services/deviceRules/types';
+import {parseDeviceRules} from '../services/deviceRules/parse';
+import {fetchRules} from '../services/deviceRules/rules';
+import {readDeviceSignals} from '../services/deviceRules/signals';
+import {DeviceRules, DeviceSignals, Tier} from '../services/deviceRules/types';
+
+import androidRulesRaw from './bundledDeviceRules/rules.android.json';
+import iosRulesRaw from './bundledDeviceRules/rules.ios.json';
 
 // Bump when the migration logic that re-merges the persisted model list
 // changes. Crossing this version runs the one-time prune-and-reconcile.
@@ -129,6 +132,8 @@ function createRemoteModel(params: {
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
+  deviceTier: Tier | null = null; // resolved device classification
+  rulesVersion: string | null = null; // provenance of the preset list
 
   /**
    * Returns models with projection models filtered out for display purposes
@@ -212,6 +217,8 @@ class ModelStore {
       properties: [
         'models',
         'version',
+        'deviceTier',
+        'rulesVersion',
         'useAutoRelease',
         'contextInitParams',
         'lastUsedModelId',
@@ -525,12 +532,17 @@ class ModelStore {
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
 
+    // Resolve the device-tier preset list (fetched rules override the bundled
+    // offline floor) before merging, so it reflects the latest rules each init.
+    const presets = await this.resolvePresets();
+
     if (storedVersion < MODEL_LIST_VERSION) {
-      this.mergeModelLists();
+      this.mergeModelLists(presets);
       runInAction(() => {
         this.version = MODEL_LIST_VERSION;
       });
     } else {
+      this.reconcilePresets(presets);
       await this.initializeDownloadStatus();
       this.removeInvalidLocalModels();
     }
@@ -609,13 +621,57 @@ class ModelStore {
     return presets;
   };
 
-  mergeModelLists = () => {
-    // The default list is now data-driven (device rules + bundled snapshot),
-    // surfaced as suggestions rather than baked PRESET entries. Migration keeps
-    // every downloaded model regardless of origin and drops non-downloaded
-    // PRESET stubs (they re-appear only if still suggested). Kept downloads are
-    // reconciled to suggestions by {repo,filename} at render time, so no id
-    // rewrite is needed here.
+  // Fetch rules (online override) or fall back to the bundled offline floor,
+  // both normalized through parseDeviceRules, then resolve the tier presets.
+  private resolvePresets = async (): Promise<Model[]> => {
+    try {
+      const signals = await readDeviceSignals();
+      const fetched = await fetchRules();
+      const bundledRaw =
+        Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
+      const rules = fetched ?? parseDeviceRules(bundledRaw);
+      const tier = classify(
+        signals,
+        rules.classifier,
+        Platform.OS as ClassifyPlatform,
+      );
+      runInAction(() => {
+        this.deviceTier = tier;
+        this.rulesVersion = rules.rulesVersion;
+      });
+      return this.resolvePresetModels(rules, signals);
+    } catch (error) {
+      console.warn('[ModelStore] preset resolution failed:', error);
+      return [];
+    }
+  };
+
+  // Append rule presets that aren't already represented by a kept model. The
+  // key is {repo,filename}, which spans origins: a downloaded legacy PRESET and
+  // a new origin:HF rule entry share it, so the kept download suppresses the
+  // rule stub (no duplicate card, no re-download).
+  reconcilePresets = (presets: Model[]) => {
+    if (presets.length === 0) {
+      return;
+    }
+    const existing = new Set(
+      this.models.map(m => `${m.repo}/${m.filename}`),
+    );
+    const toAdd = presets.filter(p => !existing.has(`${p.repo}/${p.filename}`));
+    if (toAdd.length === 0) {
+      return;
+    }
+    runInAction(() => {
+      this.models = [...this.models, ...toAdd];
+    });
+  };
+
+  mergeModelLists = (presets: Model[] = []) => {
+    // The default list is data-driven: rule-resolved origin:HF presets replace
+    // the old static PRESET array. Keep every downloaded model regardless of
+    // origin, drop non-downloaded PRESET stubs, then reconcile the resolved
+    // presets in by {repo,filename} (origin-spanning) so a kept legacy PRESET
+    // download suppresses its rule stub.
     const mergedModels = [...this.models].filter(
       model => model.origin !== ModelOrigin.PRESET || model.isDownloaded,
     );
@@ -666,6 +722,8 @@ class ModelStore {
     runInAction(() => {
       this.models = mergedModels;
     });
+
+    this.reconcilePresets(presets);
 
     this.initializeDownloadStatus();
   };

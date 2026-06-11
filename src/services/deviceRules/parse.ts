@@ -1,30 +1,29 @@
-import {ModelFile} from '../../utils/types';
-
 import {
   Classifier,
   CpuHeuristicRule,
   DeviceFamilyRule,
   DeviceRules,
   RamBand,
-  RuleHFModel,
-  RuleModelEntry,
+  RuleCandidate,
+  RuleMmproj,
   Tier,
   TierMatrixEntry,
 } from './types';
 
 // Parse-guard: turns the raw wire JSON into a typed DeviceRules or throws on a
-// structurally invalid file. Unknown/extra fields are ignored. A tier entry
-// missing a field hfAsModel requires is skipped; an old-schema or empty tier
-// parses to an empty model list (does not throw).
+// structurally invalid file. Unknown/extra fields are ignored. A candidate
+// missing a required field, or with an unsafe path segment, is skipped; an
+// old-schema or empty tier parses to an empty model list (does not throw).
 
 const TIERS: Tier[] = ['low', 'mid', 'high', 'flagship'];
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
-// Rule URLs are baked by an out-of-tree process and fetched from a third-party
-// CDN, so they are an untrusted input. Pin the download target to huggingface.co
-// (the only host the app's HF token is ever sent to) and reject any other URL.
+// The download URL is derived from a hard-coded huggingface.co template, so this
+// host check is defense-in-depth only — the real boundary is isSafePathSegment
+// on the path parts. huggingface.co is the only host the app's HF token is sent
+// to (DownloadManager host-gates the Bearer header).
 const isHuggingFaceUrl = (url: unknown): url is string => {
   if (typeof url !== 'string') {
     return false;
@@ -37,8 +36,9 @@ const isHuggingFaceUrl = (url: unknown): url is string => {
   }
 };
 
-// A wire-supplied filename flows into the local model path, so reject anything
-// that is not a plain filename (no path separators, no parent-dir traversal).
+// A wire-supplied path part (author, repo, filename) flows into both the derived
+// download URL and the local model path, so reject anything that is not a plain
+// segment (no path separators, no parent-dir traversal).
 const isSafePathSegment = (v: unknown): v is string =>
   typeof v === 'string' &&
   v.length > 0 &&
@@ -176,108 +176,97 @@ const parseClassifier = (v: unknown): Classifier => {
   };
 };
 
-const parseLfs = (v: unknown): ModelFile['lfs'] | undefined => {
-  if (!isObject(v)) {
-    return undefined;
+// Deterministic public download URL. Shared with stub-build so parse and the
+// consumer agree on the exact shape; the host is hard-coded here.
+export const deriveUrl = (repo: string, filename: string): string =>
+  `https://huggingface.co/${repo}/resolve/main/${filename}`;
+
+// Split "author/repo" and return the two parts only if there are exactly two
+// non-empty ones. Anything else (zero or ≥2 slashes, empty part) → null.
+const splitRepo = (repo: unknown): [string, string] | null => {
+  if (typeof repo !== 'string') {
+    return null;
   }
-  const oid = asString(v.oid);
-  const size = asNumber(v.size);
-  const pointerSize = asNumber(v.pointerSize ?? v.pointer_size);
-  if (oid === undefined || size === undefined || pointerSize === undefined) {
-    return undefined;
+  const parts = repo.split('/');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
   }
-  return {oid, size, pointerSize};
+  return [parts[0], parts[1]];
 };
 
-const parseModelFile = (v: unknown): ModelFile | null => {
+// Validate every path segment of a repo/filename pair before it is used to
+// derive a download URL or a local path. Returns the validated repo on success.
+const guardRepoFilename = (repo: unknown, filename: unknown): string | null => {
+  const split = splitRepo(repo);
+  if (!split) {
+    return null;
+  }
+  const [author, repoName] = split;
   if (
-    !isObject(v) ||
-    !isSafePathSegment(v.rfilename) ||
-    !isHuggingFaceUrl(v.url)
+    !isSafePathSegment(author) ||
+    !isSafePathSegment(repoName) ||
+    !isSafePathSegment(filename)
   ) {
     return null;
   }
-  return {
-    rfilename: v.rfilename,
-    url: v.url,
-    size: asNumber(v.size),
-    oid: asString(v.oid),
-    lfs: parseLfs(v.lfs),
-  };
-};
-
-const parseSibling = (v: unknown): ModelFile | null => {
-  // A sibling carries the mmproj download target, so it is held to the same
-  // host-pin and path-safety guard as the main model file.
-  if (
-    !isObject(v) ||
-    !isSafePathSegment(v.rfilename) ||
-    !isHuggingFaceUrl(v.url)
-  ) {
+  // Defense-in-depth: the derived URL host is hard-coded, so this never fails.
+  if (!isHuggingFaceUrl(deriveUrl(repo as string, filename as string))) {
     return null;
   }
-  return {
-    rfilename: v.rfilename,
-    url: v.url,
-    size: asNumber(v.size),
-    oid: asString(v.oid),
-    lfs: parseLfs(v.lfs),
-  };
+  return repo as string;
 };
 
-const parseHFModel = (v: unknown): RuleHFModel | null => {
-  if (
-    !isObject(v) ||
-    typeof v.id !== 'string' ||
-    typeof v.author !== 'string' ||
-    !isHuggingFaceUrl(v.url)
-  ) {
-    return null;
-  }
-  // author and the repo derived from id both become local path segments, so
-  // reject any value that could escape the models directory.
-  const repo = v.id.split('/')[1];
-  if (!isSafePathSegment(v.author) || !isSafePathSegment(repo)) {
-    return null;
-  }
-  const specsRaw = isObject(v.specs) && isObject(v.specs.gguf) ? v.specs : null;
-  const specs = specsRaw
-    ? {
-        ...(specsRaw as object),
-        gguf: {
-          total:
-            asNumber((specsRaw.gguf as Record<string, unknown>).total) ?? 0,
-          bos_token: asString(
-            (specsRaw.gguf as Record<string, unknown>).bos_token,
-          ),
-          eos_token: asString(
-            (specsRaw.gguf as Record<string, unknown>).eos_token,
-          ),
-        },
-      }
-    : undefined;
-  const siblings = Array.isArray(v.siblings)
-    ? v.siblings.map(parseSibling).filter((s): s is ModelFile => s !== null)
-    : undefined;
-  return {
-    id: v.id,
-    author: v.author,
-    url: v.url,
-    specs: specs as RuleHFModel['specs'],
-    siblings,
-  };
-};
-
-const parseRuleModelEntry = (v: unknown): RuleModelEntry | null => {
+const parseMmproj = (v: unknown): RuleMmproj | null => {
   if (!isObject(v)) {
     return null;
   }
-  const hfModel = parseHFModel(v.hfModel);
-  const modelFile = parseModelFile(v.modelFile);
-  if (!hfModel || !modelFile) {
+  const sizeBytes = asNumber(v.size_bytes);
+  if (sizeBytes === undefined) {
     return null;
   }
-  return {name: asString(v.name), hfModel, modelFile};
+  if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
+    return null;
+  }
+  const modalities = Array.isArray(v.modalities)
+    ? (v.modalities.filter(m => typeof m === 'string') as string[])
+    : undefined;
+  return {
+    hfRepo: v.hf_repo as string,
+    hfFilename: v.hf_filename as string,
+    sizeBytes,
+    modalities,
+  };
+};
+
+const parseCandidate = (v: unknown): RuleCandidate | null => {
+  if (!isObject(v) || typeof v.model !== 'string') {
+    return null;
+  }
+  if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
+    return null;
+  }
+  const multimodal = v.multimodal === true;
+  let mmproj: RuleMmproj | undefined;
+  if (multimodal) {
+    // A multimodal candidate with an invalid projector reference is dropped
+    // entirely — never ship a vision model with an unvalidated projector path.
+    const parsed = parseMmproj(v.mmproj);
+    if (!parsed) {
+      return null;
+    }
+    mmproj = parsed;
+  }
+  return {
+    model: v.model,
+    displayName: asString(v.display_name),
+    hfRepo: v.hf_repo as string,
+    hfFilename: v.hf_filename as string,
+    params: asNumber(v.params),
+    sizeBytes: asNumber(v.size_bytes),
+    minRamGb: asNumber(v.min_ram_gb),
+    multimodal: multimodal || undefined,
+    mmproj,
+  };
 };
 
 const parseTiers = (v: unknown): DeviceRules['tiers'] => {
@@ -288,10 +277,10 @@ const parseTiers = (v: unknown): DeviceRules['tiers'] => {
   for (const tier of TIERS) {
     const raw = v[tier];
     const models =
-      isObject(raw) && Array.isArray(raw.models)
-        ? raw.models
-            .map(parseRuleModelEntry)
-            .filter((e): e is RuleModelEntry => e !== null)
+      isObject(raw) && Array.isArray(raw.candidates)
+        ? raw.candidates
+            .map(parseCandidate)
+            .filter((c): c is RuleCandidate => c !== null)
         : [];
     tiers[tier] = {models};
   }

@@ -1,9 +1,7 @@
-import {HuggingFaceModel, ModelFile} from '../../utils/types';
-
 // Parsed wire shape of `rules.<platform>.json` plus the device signals the
-// classifier consumes. Each tier entry is a baked subset of an HF fetch — the
-// exact fields `hfAsModel` reads — so the app feeds it through that transform
-// with no remapping.
+// classifier consumes. Each tier entry is a thin, flat candidate; the app
+// synthesizes the minimal `{hfModel, modelFile}` pair `hfAsModel` reads at
+// stub-build time and defers HF-derivable data (oid/lfs/templates) to download.
 
 export type Tier = 'low' | 'mid' | 'high' | 'flagship';
 
@@ -51,19 +49,30 @@ export interface Classifier {
   cpuHeuristic?: CpuHeuristicRule[];
 }
 
-// The HuggingFaceModel subset a baked rule entry carries — exactly the fields
-// hfAsModel reads. Cast to HuggingFaceModel at the call boundary.
-export type RuleHFModel = Pick<HuggingFaceModel, 'id' | 'author' | 'url'> & {
-  specs?: Pick<HuggingFaceModel, 'specs'>['specs'];
-  siblings?: ModelFile[]; // vision repos only; each carries url+oid+lfs since the mmproj sibling is materialized into a downloadable Model
-};
+// Explicit projector reference for a multimodal candidate. The mmproj quant is
+// fixed by the authored hf_filename; the app does no quant-match discovery.
+export interface RuleMmproj {
+  hfRepo: string;
+  hfFilename: string;
+  sizeBytes: number;
+  modalities?: string[]; // forward-compat hint; engine reports actual support at load
+}
 
-// One baked {hfModel, modelFile} pair from `tiers[T].models[]`. Fed verbatim to
-// hfAsModel to yield an origin:HF Model identical to an HF-browser add.
-export interface RuleModelEntry {
-  name?: string; // optional curated display name; app uses name ?? derived
-  hfModel: RuleHFModel;
-  modelFile: ModelFile;
+// One flat candidate from the wire `tiers[T].candidates[]` array (parsed into
+// the internal `tiers[T].models[]`). The app builds a minimal {hfModel,
+// modelFile} pair from it and feeds the unchanged hfAsModel; HF-derivable data
+// resolves at download. Informational fields (quant/obs_tg/sha256/native_low_bit)
+// are dropped at parse.
+export interface RuleCandidate {
+  model: string; // stable identity key, not used as the Model id
+  displayName?: string; // optional UI name; falls back to the derived name
+  hfRepo: string; // "author/repo"
+  hfFilename: string;
+  params?: number;
+  sizeBytes?: number;
+  minRamGb?: number;
+  multimodal?: boolean;
+  mmproj?: RuleMmproj; // present iff multimodal
 }
 
 export interface DeviceRules {
@@ -71,7 +80,7 @@ export interface DeviceRules {
   platform: string;
   rulesVersion: string;
   classifier: Classifier;
-  tiers: Record<Tier, {models: RuleModelEntry[]}>;
+  tiers: Record<Tier, {models: RuleCandidate[]}>;
 }
 
 export interface DeviceSignals {

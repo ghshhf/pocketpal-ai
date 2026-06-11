@@ -38,10 +38,15 @@ import {getOriginalModelName} from '../utils/formatters';
 
 import {downloadManager} from '../services/downloads';
 import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
-import {parseDeviceRules} from '../services/deviceRules/parse';
+import {deriveUrl, parseDeviceRules} from '../services/deviceRules/parse';
 import {fetchRules} from '../services/deviceRules/rules';
 import {readDeviceSignals} from '../services/deviceRules/signals';
-import {DeviceRules, DeviceSignals, Tier} from '../services/deviceRules/types';
+import {
+  DeviceRules,
+  DeviceSignals,
+  RuleCandidate,
+  Tier,
+} from '../services/deviceRules/types';
 
 import androidRulesRaw from './bundledDeviceRules/rules.android.json';
 import iosRulesRaw from './bundledDeviceRules/rules.ios.json';
@@ -585,11 +590,48 @@ class ModelStore {
     this.checkAndReloadAutoReleasedModel();
   };
 
-  // Materialize the device-tier preset list from rules. Each entry is the baked
-  // {hfModel, modelFile} subset hfAsModel reads, so the result is origin:HF,
-  // byte-identical to an HF-browser add. Vision entries also push their mmproj
-  // sibling Models (mirrors addHFModel) so the projection is resolvable for
-  // download. Deduped by model.id (author/repo/filename), first wins.
+  // Synthesize the minimal {hfModel, modelFile} pair the unchanged hfAsModel
+  // reads from a thin candidate, with no network. The deterministic downloadUrl
+  // is set here; HF-derivable data (oid/lfs/templates) resolves at download. A
+  // multimodal candidate's explicit mmproj is synthesized into a sibling so
+  // vision detection pairs the projector and its size enters the fit check.
+  private candidateToPair = (
+    candidate: RuleCandidate,
+  ): {hfModel: HuggingFaceModel; modelFile: ModelFile} => {
+    const modelFile: ModelFile = {
+      rfilename: candidate.hfFilename,
+      url: deriveUrl(candidate.hfRepo, candidate.hfFilename),
+      size: candidate.sizeBytes,
+    };
+    const siblings: ModelFile[] | undefined = candidate.mmproj
+      ? [
+          {rfilename: candidate.hfFilename, size: candidate.sizeBytes},
+          {
+            rfilename: candidate.mmproj.hfFilename,
+            url: deriveUrl(
+              candidate.mmproj.hfRepo,
+              candidate.mmproj.hfFilename,
+            ),
+            size: candidate.mmproj.sizeBytes,
+          },
+        ]
+      : undefined;
+    const hfModel = {
+      id: candidate.hfRepo,
+      author: candidate.hfRepo.split('/')[0],
+      url: `https://huggingface.co/${candidate.hfRepo}`,
+      specs: {gguf: {total: candidate.params ?? 0}},
+      siblings,
+    } as unknown as HuggingFaceModel;
+    return {hfModel, modelFile};
+  };
+
+  // Materialize the device-tier preset list from rules. Each thin candidate is
+  // turned into the minimal pair hfAsModel reads (candidateToPair), so the
+  // result is origin:HF, identical to an HF-browser add. Multimodal candidates
+  // also push their mmproj projector stub (mirrors addHFModel) so the projection
+  // is resolvable for download. Deduped by model.id (author/repo/filename),
+  // first wins.
   resolvePresetModels = (
     rules: DeviceRules,
     signals: DeviceSignals,
@@ -599,10 +641,12 @@ class ModelStore {
       rules.classifier,
       Platform.OS as ClassifyPlatform,
     );
-    const flat = rules.tiers[tier].models.flatMap(entry => {
-      const hfModel = entry.hfModel as unknown as HuggingFaceModel;
-      const llm = hfAsModel(hfModel, entry.modelFile);
-      const named = entry.name ? {...llm, name: entry.name} : llm;
+    const flat = rules.tiers[tier].models.flatMap(candidate => {
+      const {hfModel, modelFile} = this.candidateToPair(candidate);
+      const llm = hfAsModel(hfModel, modelFile);
+      const named = candidate.displayName
+        ? {...llm, name: candidate.displayName}
+        : llm;
       if (named.supportsMultimodal) {
         const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
           hfAsModel(hfModel, file),

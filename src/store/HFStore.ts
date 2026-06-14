@@ -42,13 +42,14 @@ class HFStore {
     author: '',
     sortBy: 'relevance',
   };
+  useHfMirror = false;
 
   constructor() {
     makeAutoObservable(this);
 
     makePersistable(this, {
       name: 'HFStore',
-      properties: ['useHfToken'],
+      properties: ['useHfToken', 'useHfMirror'],
       storage: AsyncStorage,
     });
 
@@ -84,6 +85,12 @@ class HFStore {
   setUseHfToken(useToken: boolean) {
     runInAction(() => {
       this.useHfToken = useToken;
+    });
+  }
+
+  setUseHfMirror(useMirror: boolean) {
+    runInAction(() => {
+      this.useHfMirror = useMirror;
     });
   }
 

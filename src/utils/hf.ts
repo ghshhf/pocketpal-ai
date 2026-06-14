@@ -4,6 +4,7 @@
  */
 
 import {urls} from '../config';
+import {hfStore} from '../store';
 import type {HuggingFaceModel, ModelFile} from './types';
 
 // Regex pattern for detecting sharded GGUF files
@@ -36,7 +37,7 @@ export function addModelFileDownloadUrls(
 ): ModelFile[] {
   return siblings.map(sibling => ({
     ...sibling,
-    url: urls.modelDownloadFile(modelId, sibling.rfilename),
+    url: urls.modelDownloadFile(modelId, sibling.rfilename, hfStore.useHfMirror),
   }));
 }
 
@@ -67,7 +68,7 @@ export function processHFSearchResults(
 ): HuggingFaceModel[] {
   return models.map(model => ({
     ...model,
-    url: urls.modelWebPage(model.id),
+    url: urls.modelWebPage(model.id, hfStore.useHfMirror),
     siblings: normalizeModelSiblings(model.id, model.siblings || []),
   }));
 }

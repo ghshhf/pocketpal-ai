@@ -1,4 +1,5 @@
 import React, {useMemo} from 'react';
+import {Linking} from 'react-native';
 
 import {
   RenderHTMLConfigProvider,
@@ -48,6 +49,12 @@ const renderers = {
   ...tableRenderers,
 };
 
+const handleLinkPress = (url: string) => {
+  Linking.openURL(url).catch(err =>
+    console.warn('Failed to open URL:', url, err),
+  );
+};
+
 export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
@@ -61,7 +68,8 @@ export const MarkdownProvider: React.FC<React.PropsWithChildren> = ({
       systemFonts={SYSTEM_FONTS}>
       <RenderHTMLConfigProvider
         defaultTextProps={DEFAULT_TEXT_PROPS}
-        renderers={renderers}>
+        renderers={renderers}
+        onLinkPress={handleLinkPress}>
         {children}
       </RenderHTMLConfigProvider>
     </TRenderEngineProvider>

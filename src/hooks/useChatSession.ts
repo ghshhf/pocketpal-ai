@@ -163,6 +163,7 @@ const prepareCompletion = async ({
       // run_finished (success/maxTurns) or at the abort catch path with
       // partial content.
       multimodal: hasImages,
+      modelName: modelStore.activeModel?.id ?? '',
     },
   };
 

@@ -116,6 +116,8 @@
     "setTokenButton": "Set Token",
     "useHfTokenLabel": "Use HF Token",
     "useHfTokenDescription": "Enable to use token for API requests. Disable if token is causing authentication issues.",
+    "useHfMirrorLabel": "Use HF Mirror",
+    "useHfMirrorDescription": "Enable to use hf-mirror.com for model downloads. Useful in regions where Hugging Face is slow or blocked.",
     "cacheStorageTitle": "Cache & Storage",
     "clearPalCaches": "Clear Shortcuts Caches",
     "clearPalCachesDescription": "Clears cached data used to speed up Shortcuts. This won't affect your Pals or chat history.",
